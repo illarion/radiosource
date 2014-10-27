@@ -13,11 +13,21 @@ class Streamer(object):
                  source,
                  password,
                  icecast='localhost:8000',
-                 point='/tune'):
+                 point='/tune',
+                 bitrate=128,
+                 genre='',
+                 name='',
+                 description='',
+                 url=''):
         self.source = source
         self.password = password
         self.icecast = icecast
         self.point = point
+        self.bitrate = bitrate
+        self.genre = genre
+        self.name = name
+        self.description = description
+        self.url = url
 
     def update_meta(self, artist, title):
         http = httplib.HTTPConnection(self.icecast)
@@ -36,35 +46,60 @@ class Streamer(object):
 
         print http.getresponse().status
 
-
-    def stream(self):
-
+    def _connect(self):
         http = httplib.HTTPConnection(self.icecast)
         http.connect()
 
         http.putrequest('SOURCE', self.point)
         http.putheader("content-type", "audio/mpeg")
         http.putheader("Authorization", 'Basic ' + b64encode('source:%s' % self.password))
-        http.putheader("ice-name", "This is my server name")
-        http.putheader("ice-url", "http://www.google.com")
-        http.putheader("ice-genre", "DNB")
-        http.putheader("ice-private", "0")
-        http.putheader("ice-description", "This is my server description")
-        http.putheader("ice-audio-info", "ice-samplerate=44100;ice-bitrate=128;ice-channels=2")
+        http.putheader("ice-name", self.name)
+        http.putheader("ice-url", self.url)
+        http.putheader("ice-genre", self.genre)
+        http.putheader("ice-private", "1")
+        http.putheader("ice-description", self.description)
+        http.putheader("ice-audio-info", "ice-samplerate=44100;ice-bitrate={br};ice-channels=2".format(br=self.bitrate))
 
         http.endheaders()
+        return http
 
+    def _disconnect(self, http):
+        try:
+            http.close()
+        except Exception, ex:
+            print ex
+
+
+
+    def stream(self):
+        http = None
         while True:
             fn = self.source.next()
 
-            throttler = Throttler(FfmpegRecoder(fn))
-            begin = throttler.read(10)
+            ffmpeg_recoder = FfmpegRecoder(fn, bitrate=self.bitrate)
+            throttler = Throttler(ffmpeg_recoder, bitrate=self.bitrate)
 
-            http.send(begin)
-            (artist, title) = parse_fn(fn)
-            self.update_meta(artist, title)
+            if not http:
+                http = self._connect()
 
-            http.send(throttler)
+            is_new = True
+            blocksize = 8192
+            datablock = throttler.read(blocksize)
+            while datablock:
+                try:
+                    http.send(datablock)
+                except IOError, ex:
+                    print ex
+                    self._disconnect(http)
+                    http = self._connect()
+                    is_new = True
+                    continue
+                if is_new:
+                    (artist, title) = parse_fn(fn)
+                    self.update_meta(artist, title)
+                    is_new = False
+
+                datablock = throttler.read(blocksize)
 
 
 

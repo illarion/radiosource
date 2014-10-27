@@ -1,6 +1,7 @@
 import random
 import threading
 from Queue import Queue
+from pprint import pprint
 import os
 
 __author__ = 'shaman'
@@ -22,7 +23,11 @@ class DirectorySource(object):
     def scan(self):
         print "Scanning playlist..."
 
+        if self.queue.empty():
+            self._files = set()
+
         for dirpath, dirnames, filenames in os.walk(self.root, followlinks=True):
+
             scanned = set([os.path.join(dirpath, filename)
                            for filename in filenames
                            for ext in self.extensions if filename.endswith(ext)])
@@ -33,16 +38,18 @@ class DirectorySource(object):
             if self.randomize:
                 random.shuffle(to_put)
 
+            print 'Adding new files:'
+            pprint(to_put)
+
             for file_path in to_put:
                 self.queue.put(file_path)
-
-            if self.queue.empty():
-                for file_path in scanned:
-                    self.queue.put(file_path)
 
             self._files = scanned
 
     def next(self):
+        if self.queue.empty():
+            self.scan()
+
         while True:
             f = self.queue.get()
             if os.path.exists(f):

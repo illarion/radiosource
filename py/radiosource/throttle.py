@@ -6,9 +6,9 @@ class Throttler(object):
 
     PERIOD = 1  # 1 sec
 
-    def __init__(self, input, speed=128): #128 kbps
+    def __init__(self, input, bitrate=128): #128 kbps
 
-        self.speed = (speed*1024) / 8
+        self.speed = (bitrate*1024) / 8
         self.input = input
         self.cnt = 0
 
@@ -17,7 +17,10 @@ class Throttler(object):
         if self.cnt >= self.speed:
             self.cnt = 0
             time.sleep(Throttler.PERIOD)
-
-        data = self.input.read(n)
+        try:
+            data = self.input.read(n)
+        except IOError, ex:
+            print ex
+            return ''
         self.cnt += len(data)
         return data
