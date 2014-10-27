@@ -1,6 +1,7 @@
 import httplib
 from base64 import b64encode
 import urllib
+import os
 from radiosource.meta import parse_fn
 from radiosource.recode import FfmpegRecoder
 from radiosource.throttle import Throttler
@@ -44,8 +45,6 @@ class Streamer(object):
 
         http.request('GET', '/admin/metadata?' + params, headers=headers)
 
-        print http.getresponse().status
-
     def _connect(self):
         http = httplib.HTTPConnection(self.icecast)
         http.connect()
@@ -85,7 +84,8 @@ class Streamer(object):
             is_new = True
             blocksize = 8192
             datablock = throttler.read(blocksize)
-            while datablock:
+
+            while datablock and os.path.exists(fn):
                 try:
                     http.send(datablock)
                 except IOError, ex:

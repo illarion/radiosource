@@ -26,25 +26,26 @@ class DirectorySource(object):
         if self.queue.empty():
             self._files = set()
 
+        scanned = set()
         for dirpath, dirnames, filenames in os.walk(self.root, followlinks=True):
-
-            scanned = set([os.path.join(dirpath, filename)
+            scanned.update([os.path.join(dirpath, filename)
                            for filename in filenames
                            for ext in self.extensions if filename.endswith(ext)])
 
-            new_files = scanned - self._files
 
-            to_put = list(new_files)
-            if self.randomize:
-                random.shuffle(to_put)
+        new_files = scanned - self._files
 
-            print 'Adding new files:'
-            pprint(to_put)
+        to_put = list(new_files)
+        if self.randomize:
+            random.shuffle(to_put)
 
-            for file_path in to_put:
-                self.queue.put(file_path)
+        print 'Adding new files:'
+        pprint(len(to_put))
 
-            self._files = scanned
+        for file_path in to_put:
+            self.queue.put(file_path)
+
+        self._files = scanned
 
     def next(self):
         if self.queue.empty():
