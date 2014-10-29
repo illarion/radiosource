@@ -2,6 +2,7 @@ import random
 import threading
 from Queue import Queue
 from pprint import pprint
+import time
 import os
 
 __author__ = 'shaman'
@@ -17,55 +18,50 @@ class DirectorySource(object):
         self.extensions = extensions
         self.queue = Queue()
 
-        self.scan()
-        self.rescanner = threading.Timer(rescan_period, self.scan)
+        self.rescan_period = rescan_period
+        self.rescanner = threading.Thread(target=self.scan)
         self.rescanner.start()
 
     def scan(self):
-        print "Scanning playlist..."
+        while True:
+            print "Scanning playlist..."
 
-        if self.queue.empty():
-            self._files = set()
+            if self.queue.empty():
+                self._files = set()
 
-        scanned = set()
-        for dirpath, dirnames, filenames in os.walk(self.root, followlinks=True):
-            scanned.update([os.path.join(dirpath, filename)
-                           for filename in filenames
-                           for ext in self.extensions if filename.endswith(ext)])
+            scanned = set()
+            for dirpath, dirnames, filenames in os.walk(self.root, followlinks=True):
+                scanned.update([os.path.join(dirpath, filename)
+                               for filename in filenames
+                               for ext in self.extensions if filename.endswith(ext)])
 
 
-        new_files = scanned - self._files
+            new_files = scanned - self._files
 
-        to_put = list(new_files)
-        if self.randomize:
-            random.shuffle(to_put)
+            to_put = list(new_files)
+            if self.randomize:
+                random.shuffle(to_put)
 
-        print 'Adding new files:'
-        pprint(len(to_put))
+            print 'Adding new files:'
+            pprint(len(to_put))
 
-        for file_path in to_put:
-            self.queue.put(file_path)
+            for file_path in to_put:
+                self.queue.put(file_path)
 
-        self._files = scanned
+            self._files = scanned
+            time.sleep(self.rescan_period)
 
     def current_track(self):
         return self._current_track
 
     def next(self):
-        if self.queue.empty():
-            self.scan()
-
         while True:
             f = self.queue.get()
             if os.path.exists(f):
                 self._current_track = f
+                self.queue.put(f)
                 return f
 
-    def __del__(self):
-        try:
-            self.rescanner.cancel()
-        except Exception, ex:
-            pass
 
 
 
