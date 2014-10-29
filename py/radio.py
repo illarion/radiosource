@@ -12,8 +12,8 @@ if __name__ == "__main__":
     web_server = Server(conf.get('main', 'downloads'),
                         source,
                         conf.get('main', 'trash'),
-                        conf.get('main', 'login'),
-                        conf.get('main', 'password'))
+                        conf.get('main', 'admin_login'),
+                        conf.get('main', 'admin_password'))
 
     streamer = Streamer(source,
                         password=conf.get('main', 'password'),
