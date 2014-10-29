@@ -11,6 +11,7 @@ class DirectorySource(object):
 
     def __init__(self, root, randomize=True, rescan_period=20, extensions=('.ogg', '.mp3')):
         self._files = set()
+        self._current_track = None
         self.root = root
         self.randomize = randomize
         self.extensions = extensions
@@ -47,6 +48,9 @@ class DirectorySource(object):
 
         self._files = scanned
 
+    def current_track(self):
+        return self._current_track
+
     def next(self):
         if self.queue.empty():
             self.scan()
@@ -54,6 +58,7 @@ class DirectorySource(object):
         while True:
             f = self.queue.get()
             if os.path.exists(f):
+                self._current_track = f
                 return f
 
     def __del__(self):

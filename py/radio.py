@@ -1,4 +1,5 @@
 from radiosource.config import Config
+from radiosource.http.index import Server
 from radiosource.source import DirectorySource
 from radiosource.streaming import Streamer
 
@@ -8,6 +9,10 @@ if __name__ == "__main__":
     conf = Config()
 
     source = DirectorySource(conf.get('main', 'files'))
+    web_server = Server(conf.get('main', 'downloads'),
+                        source,
+                        conf.get('main', 'trash'),)
+
     streamer = Streamer(source,
                         password=conf.get('main', 'password'),
                         icecast=conf.get('main', 'icecast_host_port'),
