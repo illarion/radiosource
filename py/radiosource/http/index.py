@@ -76,7 +76,7 @@ class Handler(BaseHTTPRequestHandler):
             fp=self.rfile,
             headers=self.headers,
             environ={'REQUEST_METHOD': 'POST',
-                     'CONTENT_TYPE': self.headers['Content-Type']})
+                     'CONTENT_TYPE': self.headers.get('Content-Type', 'application/octet-stream')})
 
     def do_GET(self):
         if not hasattr(self.server, 'cstatus'):
