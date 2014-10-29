@@ -11,7 +11,9 @@ if __name__ == "__main__":
     source = DirectorySource(conf.get('main', 'files'))
     web_server = Server(conf.get('main', 'downloads'),
                         source,
-                        conf.get('main', 'trash'),)
+                        conf.get('main', 'trash'),
+                        conf.get('main', 'login'),
+                        conf.get('main', 'password'))
 
     streamer = Streamer(source,
                         password=conf.get('main', 'password'),

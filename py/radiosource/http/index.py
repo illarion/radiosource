@@ -1,4 +1,5 @@
 from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
+import base64
 import cgi
 import threading
 import errno
@@ -79,6 +80,11 @@ class Handler(BaseHTTPRequestHandler):
                      'CONTENT_TYPE': self.headers.get('Content-Type', 'application/octet-stream')})
 
     def do_GET(self):
+
+        if not self.check_auth(self.server.login,
+                               self.server.password):
+            return
+
         if not hasattr(self.server, 'cstatus'):
             self.server.cstatus = ''
 
@@ -114,8 +120,31 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(301)
         self.send_header("Location", "/")
 
+    def check_auth(self, login, password):
+        auth_header = self.headers.get('Authorization', None)
+
+        if not auth_header:
+            self.send_response(401)
+            self.send_header("WWW-Authenticate", "Basic realm=\"radiosource\"")
+            self.end_headers()
+            return False
+
+
+        lp = base64.decodestring(auth_header.replace('Basic ', '')).split(':')
+
+        if (lp[0] != login) or (lp[1] != password):
+            self.send_response(401)
+            self.send_header("WWW-Authenticate", "Basic realm=\"radiosource\"")
+            self.end_headers()
+            return False
+
+        return True
 
     def do_POST(self):
+        if not self.check_auth(self.server.login,
+                               self.server.password):
+            return
+
         form = self.mkform()
         if self.path == '/':
             self._POST_file(form)
@@ -126,7 +155,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 class Server(object):
-    def __init__(self, download_folder, source, trash):
+    def __init__(self, download_folder, source, trash, login, password):
 
         try:
             os.makedirs(trash)
@@ -141,6 +170,8 @@ class Server(object):
         self.http_server.ydl = Ydl(download_folder)
         self.http_server.source = source
         self.http_server.trash = trash
+        self.http_server.login = login
+        self.http_server.password = password
 
         self.t = threading.Thread(target=self._serve)
         self.t.start()
