@@ -28,8 +28,8 @@ class Ydl(object):
                 clean.append(url)
             time.sleep(10)
 
-        for url in clean:
-            del self.processes[url]
+            for url in clean:
+                del self.processes[url]
 
     def download(self, url):
         cmd = Ydl.CMD.format(url=url)

@@ -24,31 +24,30 @@ class DirectorySource(object):
 
     def scan(self):
         while True:
-            print "Scanning playlist..."
-
-            if self.queue.empty():
-                self._files = set()
-
             scanned = set()
+
             for dirpath, dirnames, filenames in os.walk(self.root, followlinks=True):
                 scanned.update([os.path.join(dirpath, filename)
                                for filename in filenames
                                for ext in self.extensions if filename.endswith(ext)])
 
-
             new_files = scanned - self._files
+            deleted_files = self._files - scanned
+
+            self._files.update(new_files)
+            self._files = self._files - deleted_files
 
             to_put = list(new_files)
+
             if self.randomize:
                 random.shuffle(to_put)
 
-            print 'Adding new files:'
-            pprint(len(to_put))
+            if to_put:
+                print 'Adding %d new files to play queue' % len(to_put)
 
             for file_path in to_put:
                 self.queue.put(file_path)
 
-            self._files = scanned
             time.sleep(self.rescan_period)
 
     def current_track(self):
@@ -59,7 +58,7 @@ class DirectorySource(object):
             f = self.queue.get()
             if os.path.exists(f):
                 self._current_track = f
-                self.queue.put(f)
+                self._files -= {f}  #will be found by rescan process and added
                 return f
 
 
