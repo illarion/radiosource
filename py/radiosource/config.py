@@ -26,6 +26,14 @@ class Config(object):
 
         return result
 
+    def get_boolean(self, section, option, default=None):
+        try:
+            result = self.config.getboolean(section, option)
+        except NoOptionError:
+            return default
+
+        return result
+
     def is_present(self, section, option):
         try:
             self.config.get(section, option)

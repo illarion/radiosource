@@ -23,5 +23,6 @@ if __name__ == "__main__":
                         genre=conf.get('main', 'genre', 'Various'),
                         name=conf.get('main', 'name', ''),
                         description=conf.get('main', 'description', ''),
-                        url=conf.get('main', 'url', ''))
+                        url=conf.get('main', 'url', ''),
+                        public=conf.get_boolean('main', 'public', False))
     streamer.stream()

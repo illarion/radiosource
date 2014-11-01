@@ -19,7 +19,8 @@ class Streamer(object):
                  genre='',
                  name='',
                  description='',
-                 url=''):
+                 url='',
+                 public=False):
         self.source = source
         self.password = password
         self.icecast = icecast
@@ -29,6 +30,7 @@ class Streamer(object):
         self.name = name
         self.description = description
         self.url = url
+        self.public = public
 
     def update_meta(self, artist, title):
         http = httplib.HTTPConnection(self.icecast)
@@ -55,7 +57,8 @@ class Streamer(object):
         http.putheader("ice-name", self.name)
         http.putheader("ice-url", self.url)
         http.putheader("ice-genre", self.genre)
-        http.putheader("ice-private", "1")
+        http.putheader("ice-private", "0" if self.public else "1")
+        http.putheader("ice-public", "1" if self.public else "0")
         http.putheader("ice-description", self.description)
         http.putheader("ice-audio-info", "ice-samplerate=44100;ice-bitrate={br};ice-channels=2".format(br=self.bitrate))
 
