@@ -52,7 +52,7 @@ class Streamer(object):
         http.connect()
 
         http.putrequest('SOURCE', self.point)
-        http.putheader("content-type", "application/ogg")
+        http.putheader("content-type", "audio/mpeg")
         http.putheader("Authorization", 'Basic ' + b64encode('source:%s' % self.password))
         http.putheader("ice-name", self.name)
         http.putheader("ice-url", self.url)

@@ -2,9 +2,8 @@ import subprocess, shlex
 
 
 class FfmpegRecoder(object):
-
-    # CMD = 'ffmpeg -i "{input}" -f ogg -acodec libvorbis -ab 192k outputdir/$file'
-    CMD = 'ffmpeg -i "{input}" -vn -codec:a libvorbis -b:a {bitrate}k -f ogg -'
+    # CMD = 'ffmpeg -i "{input}" -vn -codec:a libvorbis -b:a {bitrate}k -f ogg -'
+    CMD = 'ffmpeg -i "{input}" -strict -2 -vn -codec:a libmp3lame -b:a {bitrate}k -f mp3 -'
 
     def __init__(self, input_file_name, bitrate=128):
         self.input_file_name = input_file_name
