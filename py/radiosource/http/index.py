@@ -1,8 +1,10 @@
 from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
+import SocketServer
 import base64
 import cgi
 import threading
 import errno
+import BaseHTTPServer
 
 import os
 import shutil
@@ -154,6 +156,13 @@ class Handler(BaseHTTPRequestHandler):
             self._POST_del(form)
 
 
+class ForkingHTTPServer(SocketServer.ForkingMixIn, BaseHTTPServer.HTTPServer):
+    def finish_request(self, request, client_address):
+        request.settimeout(self.timeout)
+        # "super" can not be used because BaseServer is not created from object
+        BaseHTTPServer.HTTPServer.finish_request(self, request, client_address)
+
+
 class Server(object):
     def __init__(self, download_folder, source, trash, login, password):
 
@@ -165,13 +174,15 @@ class Server(object):
             else:
                 raise exc
 
-        self.http_server = HTTPServer(('', 8080), Handler)
+        self.http_server = ForkingHTTPServer(('', 8080), Handler)
         self.http_server.download_folder = download_folder
         self.http_server.ydl = Ydl(download_folder)
         self.http_server.source = source
         self.http_server.trash = trash
         self.http_server.login = login
         self.http_server.password = password
+
+        self.http_server.timeout = 30
 
         self.t = threading.Thread(target=self._serve)
         self.t.start()

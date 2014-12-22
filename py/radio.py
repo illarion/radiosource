@@ -1,3 +1,5 @@
+import sys
+import daemon
 from radiosource.config import Config
 from radiosource.http.index import Server
 from radiosource.source import DirectorySource
@@ -6,6 +8,10 @@ from radiosource.streaming import Streamer
 __author__ = 'shaman'
 
 if __name__ == "__main__":
+    debug = '--debug' in sys.argv
+    if not debug:
+        daemon.daemonize('pid.txt')
+
     conf = Config()
 
     source = DirectorySource(conf.get('main', 'files'))

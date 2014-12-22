@@ -102,7 +102,13 @@ class Streamer(object):
                     self.update_meta(artist, title)
                     is_new = False
 
-                datablock = throttler.read(blocksize)
+                try:
+                    datablock = throttler.read(blocksize)
+                except KeyboardInterrupt as e:
+                    ffmpeg_recoder.close()
+                    return
+                except Exception as e:
+                    print e
 
 
 
