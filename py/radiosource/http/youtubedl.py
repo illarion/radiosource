@@ -9,7 +9,7 @@ import threading
 
 
 class Ydl(object):
-    CMD = "youtube-dl -o '%(title)s.%(ext)s' --audio-quality 0 --extract-audio --audio-format vorbis \"{url}\""
+    CMD = "youtube-dl --no-playlist -o '%(title)s.%(ext)s' --audio-quality 0 --extract-audio --audio-format vorbis \"{url}\""
 
     def __init__(self, download_folder):
         if not os.path.exists(download_folder):
