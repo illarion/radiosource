@@ -32,7 +32,11 @@ def start(folder=FOLDER, ):
 
 
 def upload(folder=FOLDER):
-    local("find ./py -name '*.pyc' -print0|xargs -0 rm", capture=False)
+    try:
+        local("find ./py -name '*.pyc' -print0|xargs -0 rm", capture=False)
+    except:
+        warn("Nothing to delete in *.pyc")
+
     put('./py', folder)
     put('./requirements.txt', folder)
 
