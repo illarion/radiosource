@@ -1,8 +1,8 @@
 import random
 import threading
 from Queue import Queue
-from pprint import pprint
 import time
+import logging
 import os
 
 __author__ = 'shaman'
@@ -11,6 +11,7 @@ __author__ = 'shaman'
 class DirectorySource(object):
 
     def __init__(self, root, randomize=True, rescan_period=20, extensions=('.ogg', '.mp3')):
+        self.log = logging.getLogger('DirectorySource')
         self._files = set()
         self._current_track = None
         self.root = root
@@ -33,6 +34,8 @@ class DirectorySource(object):
 
             new_files = scanned - self._files
             deleted_files = self._files - scanned
+            if deleted_files:
+                self.log.info('Deleted %d files' % len(deleted_files))
 
             self._files.update(new_files)
             self._files = self._files - deleted_files
@@ -43,7 +46,7 @@ class DirectorySource(object):
                 random.shuffle(to_put)
 
             if to_put:
-                print 'Adding %d new files to play queue' % len(to_put)
+                self.log.info('Adding %d new files to play queue' % len(to_put))
 
             for file_path in to_put:
                 self.queue.put(file_path)

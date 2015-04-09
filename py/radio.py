@@ -1,5 +1,8 @@
 import sys
+from StringIO import StringIO
+import traceback
 import daemon
+import logging
 from radiosource.config import Config
 from radiosource.http.index import Server
 from radiosource.source import DirectorySource
@@ -11,6 +14,22 @@ if __name__ == "__main__":
     debug = '--debug' in sys.argv
     if not debug:
         daemon.daemonize('pid.txt')
+
+        filelog = logging.FileHandler('/var/log/radio.log')
+        formatter = logging.Formatter(fmt='%(asctime)s: (%(name)s) [%(levelname)s] %(message)s')
+        filelog.setFormatter(formatter)
+        filelog.setLevel(logging.DEBUG)
+        logging.root.setLevel(logging.DEBUG)
+        logging.root.addHandler(filelog)
+
+        def hook(_type, _ex, _trace):
+            sio = StringIO()
+            traceback.print_tb(_trace, file=sio)
+            logging.error("\nUncaught exception %s\nmessage='%s'\n:%s", str(_type), str(_ex), sio.getvalue())
+            sio.close()
+            sys.__excepthook__(_type, _ex, _trace)
+
+        sys.excepthook = hook
 
     conf = Config()
 

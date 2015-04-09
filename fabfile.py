@@ -51,6 +51,8 @@ def _mkenv(folder):
         run('virtualenv env')
         _virtualenv('pip install -r requirements.txt')
 
+def watch():
+    run('tail -f /var/log/radio.log')
 
 def deploy(folder=FOLDER):
     _prepare_requirements()
