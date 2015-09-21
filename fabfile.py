@@ -25,10 +25,10 @@ def stop(folder=FOLDER):
         warn("Did not stop")
 
 
-
 def start(folder=FOLDER, ):
     with cd(folder):
         _virtualenv('python py/radio.py', pty=False)
+        _virtualenv('python py/radio_webinterface.py', pty=False)
 
 
 def upload(folder=FOLDER):
@@ -51,8 +51,10 @@ def _mkenv(folder):
         run('virtualenv env')
         _virtualenv('pip install -r requirements.txt')
 
+
 def watch():
     run('tail -f /var/log/radio.log')
+
 
 def deploy(folder=FOLDER):
     _prepare_requirements()

@@ -3,8 +3,8 @@ from StringIO import StringIO
 import traceback
 import daemon
 import logging
+from radiosource.api.api_handler import RadioApi
 from radiosource.config import Config
-from radiosource.http.index import Server
 from radiosource.source import DirectorySource
 from radiosource.streaming import Streamer
 
@@ -34,11 +34,10 @@ if __name__ == "__main__":
     conf = Config()
 
     source = DirectorySource(conf.get('main', 'files'))
-    web_server = Server(conf.get('main', 'downloads'),
-                        source,
-                        conf.get('main', 'trash'),
-                        conf.get('main', 'admin_login'),
-                        conf.get('main', 'admin_password'))
+
+    api_handler = RadioApi(conf.get('main', 'downloads'),
+                           source,
+                           conf.get('main', 'trash'))
 
     streamer = Streamer(source,
                         password=conf.get('main', 'password'),

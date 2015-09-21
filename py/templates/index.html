@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Radio source</title>
+</head>
+<link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+<body>
+
+<h1>Upload new File</h1>
+
+<form action="/upload" method="post" enctype="multipart/form-data">
+    <p><input type="file" name="file">
+        <input type="submit" value="Upload"></p>
+</form>
+
+<form action="/download" method="post" enctype="multipart/form-data">
+    <p><input type="url" name="url">
+        <input type="submit" value="Download from web"></p>
+</form>
+
+
+<h1>NP</h1>
+{{ np }}
+<form action="/del" method="post" enctype="multipart/form-data">
+        <input type="submit" value="Del np"></p>
+</form>
+
+<form action="/next" method="post" enctype="multipart/form-data">
+        <input type="submit" value="next >>"></p>
+</form>
+
+<form action="/reload" method="post" enctype="multipart/form-data">
+        <input type="submit" value="reload"></p>
+</form>
+
+
+
+
+</body>
+</html>

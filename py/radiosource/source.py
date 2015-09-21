@@ -23,6 +23,11 @@ class DirectorySource(object):
         self.rescanner = threading.Thread(target=self.scan)
         self.rescanner.start()
 
+    def reset(self):
+        self._files = set()
+        self._current_track = None
+        self.queue = Queue()
+
     def scan(self):
         while True:
             scanned = set()
