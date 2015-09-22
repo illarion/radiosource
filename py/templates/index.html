@@ -3,39 +3,62 @@
 <head>
     <meta charset="UTF-8">
     <title>Radio source</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+
+    <!-- Optional theme -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap-theme.min.css">
+
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script src="//code.jquery.com/jquery-migrate-1.2.1.min.js"></script>
+
+    <!-- Latest compiled and minified JavaScript -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+            $('#ff').change(function () {
+                $('#ff_name').val($(this).val());
+            })
+        });
+    </script>
 </head>
-<link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
 <body>
 
-<h1>Upload new File</h1>
+<div class="container">
 
-<form action="/upload" method="post" enctype="multipart/form-data">
-    <p><input type="file" name="file">
-        <input type="submit" value="Upload"></p>
-</form>
+    <form action="/upload" method="post" enctype="multipart/form-data" class="form-inline">
+        <div class="form-group">
+            <div class="input-group">
+                <input type="text" id="ff_name" class="form-control input-group-addon">
+                <a class="btn btn-default input-group-addon" onclick="$('input[id=ff]').click();">Select file to
+                    upload</a>
+            </div>
+            <input id="ff" type="file" name="file" style="display:none;">
+            <input id="upload" type="submit" value="Upload" class="btn btn-default">
+        </div>
+    </form>
 
-<form action="/download" method="post" enctype="multipart/form-data">
-    <p><input type="url" name="url">
-        <input type="submit" value="Download from web"></p>
-</form>
+    <hr/>
 
+    <form action="/download" method="post" enctype="multipart/form-data" class="form-inline">
+        <div class="form-group">
+            <label for="url">Input url (youtube, soundcloud, etc)</label>
+            <input id="url" type="text" name="url" class="form-control">
+            <input type="submit" value="Download from web" class="btn btn-default">
+        </div>
+    </form>
 
-<h1>NP</h1>
-{{ np }}
-<form action="/del" method="post" enctype="multipart/form-data">
-        <input type="submit" value="Del np"></p>
-</form>
+    <hr/>
+    <p>NP: {{ np }}</p>
+    <hr/>
 
-<form action="/next" method="post" enctype="multipart/form-data">
-        <input type="submit" value="next >>"></p>
-</form>
-
-<form action="/reload" method="post" enctype="multipart/form-data">
-        <input type="submit" value="reload"></p>
-</form>
-
-
-
-
+    <form class="form-inline">
+        <input type="submit" value="del np" class="btn btn-default" formmethod="post" formaction="/del">
+        <input type="submit" value="next" class="btn btn-default" formmethod="post" formaction="/next">
+        <input type="submit" value="reload" class="btn btn-default" formmethod="post" formaction="/reload">
+    </form>
+</div>
 </body>
 </html>
