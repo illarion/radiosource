@@ -1,9 +1,11 @@
 import socket
+import daemon
 import os
 from flask import Flask, render_template, request, Response
 from werkzeug.utils import secure_filename, redirect
 from functools import wraps
 from radiosource import config
+from gevent.wsgi import WSGIServer
 
 import sys
 
@@ -96,6 +98,7 @@ def requires_auth(f):
         return f(*args, **kwargs)
     return decorated
 
+
 @app.route("/", methods=['GET'])
 @requires_auth
 def index():
@@ -145,4 +148,11 @@ def reload():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    debug = '--debug' in sys.argv
+    if not debug:
+        daemon.daemonize('web_pid.txt')
+
+        http_server = WSGIServer(('', 5000), app)
+        http_server.serve_forever()
+    else:
+        app.run(debug=True)

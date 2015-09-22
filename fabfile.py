@@ -20,7 +20,9 @@ def stop(folder=FOLDER):
     try:
         with cd(folder):
             run('if [ -f pid.txt ]; then kill `cat pid.txt`; fi')
+            run('if [ -f web_pid.txt ]; then kill `cat web_pid.txt`; fi')
             run('rm -f pid.txt')
+            run('rm -f web_pid.txt')
     except:
         warn("Did not stop")
 
