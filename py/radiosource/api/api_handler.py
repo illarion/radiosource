@@ -61,7 +61,7 @@ class ApiHandler(object):
 
 
 class RadioApi(ApiHandler):
-    def __init__(self, download_folder, source, trash_folder):
+    def __init__(self, download_folder, source, streamer, trash_folder):
         super(RadioApi, self).__init__()
         """
         :type download_folder: str
@@ -70,6 +70,7 @@ class RadioApi(ApiHandler):
         """
         self.download_folder = download_folder
         self.source = source
+        self.streamer = streamer
         self.trash_folder = trash_folder
 
         self.ydl = Ydl(self.download_folder)
@@ -80,11 +81,12 @@ class RadioApi(ApiHandler):
 
     def handle_next(self):
         print "Swithc to next track"
-        self.source.next()
+        self.streamer.next()
 
     def handle_reload(self):
         print "Reload all tracks"
         self.source.reset()
+        self.streamer.next()
 
     def handle_del(self):
         print "Delete current track"

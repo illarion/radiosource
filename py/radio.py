@@ -35,10 +35,6 @@ if __name__ == "__main__":
 
     source = DirectorySource(conf.get('main', 'files'))
 
-    api_handler = RadioApi(conf.get('main', 'downloads'),
-                           source,
-                           conf.get('main', 'trash'))
-
     streamer = Streamer(source,
                         password=conf.get('main', 'password'),
                         icecast=conf.get('main', 'icecast_host_port'),
@@ -49,4 +45,8 @@ if __name__ == "__main__":
                         description=conf.get('main', 'description', ''),
                         url=conf.get('main', 'url', ''),
                         public=conf.get_boolean('main', 'public', False))
+
+    api_handler = RadioApi(conf.get('main', 'downloads'), source, streamer, conf.get('main', 'trash'))
+
     streamer.stream()
+
