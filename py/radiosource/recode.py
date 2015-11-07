@@ -3,8 +3,8 @@ import meta
 
 
 class FfmpegRecoder(object):
-    # CMD = 'ffmpeg -i "{input}" -vn -codec:a libvorbis -b:a {bitrate}k -f ogg -'
-    CMD = 'ffmpeg -i "{input}" -metadata title="{title}" -metadata artist="{artist}" -id3v2_version 3 -strict -2 -vn -codec:a libmp3lame -b:a {bitrate}k -f mp3 -'
+    CMD = 'ffmpeg -i "{input}" -metadata title="{title}" -metadata artist="{artist}" -vn -codec:a libvorbis -b:a {bitrate}k -minrate {bitrate}k -maxrate {bitrate}k -f ogg pipe:1 '
+    # CMD = 'ffmpeg -i "{input}" -strict -2 -vn -codec:a libmp3lame -b:a {bitrate}k -f mp3 -'
 
     def __init__(self, input_file_name, bitrate=128):
         self.input_file_name = input_file_name
@@ -29,7 +29,6 @@ class FfmpegRecoder(object):
     def close(self):
         self.p.terminate()
         return self.p.stdout.close()
-
 
     def closed(self):
         return self.p.stdout.closed()
