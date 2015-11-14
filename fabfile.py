@@ -1,3 +1,6 @@
+from fabric.contrib.files import exists
+from fabric.contrib.project import rsync_project
+
 FOLDER = 'radiosource'
 __author__ = 'shaman'
 
@@ -39,18 +42,13 @@ def upload(folder=FOLDER):
     except:
         warn("Nothing to delete in *.pyc")
 
-    put('./py', folder)
-    put('./requirements.txt', folder)
-
-
-def _recreate(folder):
-    run('rm -rf %s' % folder)
-    run('mkdir -p %s' % folder)
-
+    rsync_project(folder, local_dir='./', exclude=('env', '.gitignore', '.git', 'fabfile.py'), delete=True,)
 
 def _mkenv(folder):
     with cd(folder):
-        run('virtualenv env')
+        if not exists('env'):
+            run('virtualenv env')
+
         _virtualenv('pip install -r requirements.txt')
 
 
@@ -61,7 +59,6 @@ def watch():
 def deploy(folder=FOLDER):
     _prepare_requirements()
     stop(folder)
-    _recreate(folder)
     upload(folder)
     _cleanup()
     _mkenv(folder)
