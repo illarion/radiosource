@@ -1,5 +1,6 @@
 import socket
 import daemon
+import flask
 import os
 from flask import Flask, render_template, request, Response
 from werkzeug.utils import secure_filename, redirect
@@ -104,6 +105,13 @@ def requires_auth(f):
 def index():
     np = client.np()
     return render_template('index.html', np=np)
+
+
+@app.route("/np", methods=['GET'])
+def np():
+    resp = flask.Response(client.np())
+    resp.headers['Access-Control-Allow-Origin'] = '*'
+    return resp
 
 
 @app.route("/upload", methods=['POST'])
