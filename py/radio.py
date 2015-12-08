@@ -1,11 +1,16 @@
 import sys
 from StringIO import StringIO
 import traceback
+
+import datetime
+
 import daemon
 import logging
+
+from radiosource import DEFAULT_KIND, MIX_KIND
 from radiosource.api.api_handler import RadioApi
 from radiosource.config import Config
-from radiosource.source import DirectorySource
+from radiosource.source import DirectorySource, MultiplexingRuleSource
 from radiosource.streaming import Streamer
 
 __author__ = 'shaman'
@@ -33,7 +38,25 @@ if __name__ == "__main__":
 
     conf = Config()
 
-    source = DirectorySource(conf.get('main', 'files'))
+    default_folder = conf.get('main', 'files')
+    mixes_folder = conf.get('main', 'files_mixes')
+
+    default_source = DirectorySource(default_folder)
+    mixes_source = DirectorySource(mixes_folder)
+
+    kind_to_folder = {
+        DEFAULT_KIND: default_folder,
+        MIX_KIND: mixes_folder
+    }
+
+    def mix_rule():
+        utcnow = datetime.datetime.utcnow()
+        print utcnow
+
+        return (20 <= utcnow.hour <= 23) or (0 <= utcnow.hour <= 6)
+
+
+    source = MultiplexingRuleSource(default_source, [(mixes_source, mix_rule)])
 
     streamer = Streamer(source,
                         password=conf.get('main', 'password'),
@@ -46,7 +69,7 @@ if __name__ == "__main__":
                         url=conf.get('main', 'url', ''),
                         public=conf.get_boolean('main', 'public', False))
 
-    api_handler = RadioApi(conf.get('main', 'downloads'), source, streamer, conf.get('main', 'trash'))
+    api_handler = RadioApi(kind_to_folder, source, streamer, conf.get('main', 'trash'))
 
     streamer.stream()
 

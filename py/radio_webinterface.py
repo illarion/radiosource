@@ -25,9 +25,9 @@ class RadioClient(object):
     def _after(self):
         self.sock.close()
 
-    def download(self, url):
+    def download(self, kind, url):
         self._before()
-        self.sock.send('download %s\n' % url)
+        self.sock.send('download %s %s\n' % (kind, url))
         result = self.sock.recv(1024)
         self._after()
         return result
@@ -60,9 +60,9 @@ class RadioClient(object):
         self._after()
         return result
 
-    def add(self, local_file_path):
+    def add(self, kind, local_file_path):
         self._before()
-        self.sock.send('add %s\n' % local_file_path)
+        self.sock.send('add %s %s\n' % (kind, local_file_path))
         result = self.sock.recv(1024)
         self._after()
         return result
@@ -118,11 +118,13 @@ def np():
 @requires_auth
 def upload():
     f = request.files['file']
+    kind = request.form['submit']
+
     if f:
         filename = secure_filename(f.filename)
         local_file_path = os.path.join('/tmp/', filename)
         f.save(local_file_path)
-        client.add(local_file_path)
+        client.add(kind, local_file_path)
         return redirect("/")
 
 
@@ -130,7 +132,8 @@ def upload():
 @requires_auth
 def download_url():
     url = request.form['url']
-    client.download(url)
+    kind = request.form['submit']
+    client.download(kind, url)
     return redirect("/")
 
 
