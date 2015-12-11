@@ -1,5 +1,7 @@
 import time
 
+import logging
+
 __author__ = 'shaman'
 
 
@@ -44,6 +46,7 @@ class Throttler(object):
 
         self.cnt = 0
         self.t0 = None
+        self.log = logging.getLogger("Throttler")
 
     def read(self, n=-1):
 
@@ -63,7 +66,7 @@ class Throttler(object):
         try:
             data = self.input.read(n)
         except IOError, ex:
-            print ex
+            self.log.exception("I/O Error during read from source")
             return ''
         self.cnt += len(data)
         return data

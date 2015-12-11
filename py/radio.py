@@ -1,12 +1,9 @@
 import sys
 from StringIO import StringIO
 import traceback
-
 import datetime
-
 import daemon
 import logging
-
 from radiosource import DEFAULT_KIND, MIX_KIND
 from radiosource.api.api_handler import RadioApi
 from radiosource.config import Config
@@ -16,25 +13,32 @@ from radiosource.streaming import Streamer
 __author__ = 'shaman'
 
 if __name__ == "__main__":
+
     debug = '--debug' in sys.argv
+
+    logging.root.setLevel(logging.DEBUG)
+
     if not debug:
         daemon.daemonize('pid.txt')
+        handler = logging.FileHandler('/var/log/radio.log')
+    else:
+        handler = logging.StreamHandler()
 
-        filelog = logging.FileHandler('/var/log/radio.log')
-        formatter = logging.Formatter(fmt='%(asctime)s: (%(name)s) [%(levelname)s] %(message)s')
-        filelog.setFormatter(formatter)
-        filelog.setLevel(logging.DEBUG)
-        logging.root.setLevel(logging.DEBUG)
-        logging.root.addHandler(filelog)
+    formatter = logging.Formatter(fmt='%(asctime)s: (%(name)s) [%(levelname)s] %(message)s')
+    handler.setFormatter(formatter)
+    handler.setLevel(logging.DEBUG)
+    logging.root.addHandler(handler)
 
-        def hook(_type, _ex, _trace):
-            sio = StringIO()
-            traceback.print_tb(_trace, file=sio)
-            logging.error("\nUncaught exception %s\nmessage='%s'\n:%s", str(_type), str(_ex), sio.getvalue())
-            sio.close()
-            sys.__excepthook__(_type, _ex, _trace)
 
-        sys.excepthook = hook
+    def hook(_type, _ex, _trace):
+        sio = StringIO()
+        traceback.print_tb(_trace, file=sio)
+        logging.error("\nUncaught exception %s\nmessage='%s'\n:%s", str(_type), str(_ex), sio.getvalue())
+        sio.close()
+        sys.__excepthook__(_type, _ex, _trace)
+
+
+    sys.excepthook = hook
 
     conf = Config()
 
@@ -49,10 +53,9 @@ if __name__ == "__main__":
         MIX_KIND: mixes_folder
     }
 
+
     def mix_rule():
         utcnow = datetime.datetime.utcnow()
-        print utcnow
-
         return (20 <= utcnow.hour <= 23) or (0 <= utcnow.hour <= 6)
 
 
@@ -72,4 +75,3 @@ if __name__ == "__main__":
     api_handler = RadioApi(kind_to_folder, source, streamer, conf.get('main', 'trash'))
 
     streamer.stream()
-

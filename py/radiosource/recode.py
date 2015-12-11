@@ -32,7 +32,6 @@ class FfmpegRecoder(object):
                                    stdout=subprocess.PIPE,
                                    stderr=null)
 
-
     def read(self, n=-1):
         return self.p2.stdout.read(n)
 
