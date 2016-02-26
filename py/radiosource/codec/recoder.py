@@ -1,14 +1,10 @@
 import shlex
 import subprocess
-from subprocess import Popen
 import signal
-import fcntl
-
 import time
-
 import logging
 
-import os
+from subprocess import Popen
 from radiosource.codec.copystream import CopyStream
 
 
@@ -33,21 +29,15 @@ class Recoder(object):
                   stderr=open('/dev/null', mode='w')
                   )
 
-        fd = p.stdout.fileno()
-        fl = fcntl.fcntl(fd, fcntl.F_GETFL)  # get flags
-        fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)  # set flags + NON_BLOCKING
-
         self.copystream.set_destination_process(p)
         self.dst = p
 
-    def process_file(self, path):
+    def make_input_process(self, path):
         p = Popen(prepare_cmdline('ffmpeg -i "{input}" -acodec pcm_s16le -ac 2 -f wav pipe:1', input=path),
                   stdout=subprocess.PIPE, stderr=open('/dev/null', mode='w'))
 
         self.copystream.set_source_process(p)
         self.src = p
-
-        return True
 
     def read(self, n=-1):
         exitcode = self.dst.poll()
@@ -68,15 +58,16 @@ class Recoder(object):
             self.log.exception("Other error while read")
             return ''
 
-    def stop(self):
-        self.src.send_signal(signal.SIGTERM)
+    def kill_source_process(self):
+        self.src.send_signal(signal.SIGKILL)
 
-    def is_file_finished(self):
+    def is_decoder_finished(self):
         return self.copystream.is_source_dead()
+
+    def is_encoder_finished(self):
+        return self.copystream.is_destination_dead()
 
     def close(self):
         self.src.send_signal(signal.SIGKILL)
         self.dst.send_signal(signal.SIGKILL)
 
-    def is_encoder_finished(self):
-        return self.copystream.is_destination_dead()

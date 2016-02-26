@@ -1,5 +1,4 @@
 import httplib
-import time
 import urllib
 from Queue import Queue
 from base64 import b64encode
@@ -112,7 +111,7 @@ class Streamer(object):
                 self.log.warn("Recreating encoder process")
                 recoder.make_output_process()
 
-            recoder.process_file(fn)
+            recoder.make_input_process(fn)
             data_block = recoder.read(block_size)
 
             (artist, title) = parse_fn(fn)
@@ -124,7 +123,7 @@ class Streamer(object):
                     q.put(data_block)
                 try:
                     data_block = recoder.read(block_size)
-                    if not data_block and (recoder.is_file_finished() or recoder.is_encoder_finished()):
+                    if not data_block and (recoder.is_decoder_finished() or recoder.is_encoder_finished()):
                         break
 
                 except KeyboardInterrupt as e:
@@ -135,8 +134,8 @@ class Streamer(object):
                     self.log.exception("Error during recoding")
                     break
 
+            recoder.kill_source_process()
             if self.__next:
-                recoder.stop()
                 self.__next = False
 
     def stream(self):
