@@ -11,6 +11,7 @@ from radiosource.source import DirectorySource
 
 SOCKET_PATH = '/tmp/radiosource.socket'
 
+
 class ApiHandler(object):
     def __init__(self):
         if os.path.exists(SOCKET_PATH):
@@ -40,16 +41,16 @@ class ApiHandler(object):
                     buf += data
 
     def route(self, line, conn):
-        cmdline = line.split(' ', 1)
+        cmdline = line.split(' ')
         command = cmdline[0]
-        arg = cmdline[1] if len(cmdline)>1 else None
+        args = cmdline[1:] if len(cmdline) > 1 else None
 
-        print 'cmd=%s, arg=%s' % (command, arg)
+        print 'cmd=%s, arg=%s' % (command, str(args))
 
         handler = getattr(self, 'handle_' + command, None)
         if handler:
             try:
-                response = handler(arg) if arg is not None else handler()
+                response = handler(*args) if args is not None else handler()
                 if response:
                     conn.send(response + '\n')
                 else:
@@ -61,23 +62,23 @@ class ApiHandler(object):
 
 
 class RadioApi(ApiHandler):
-    def __init__(self, download_folder, source, streamer, trash_folder):
+    def __init__(self, kind_to_folder, source, streamer, trash_folder):
         super(RadioApi, self).__init__()
         """
         :type download_folder: str
         :type source: radiosource.DirectorySource
         :type trash: str
         """
-        self.download_folder = download_folder
         self.source = source
         self.streamer = streamer
         self.trash_folder = trash_folder
+        self.kind_to_folder = kind_to_folder
 
-        self.ydl = Ydl(self.download_folder)
+        self.ydl = Ydl(kind_to_folder)
 
-    def handle_download(self, url):
+    def handle_download(self, kind, url):
         print "Will download " + url
-        self.ydl.download(url)
+        self.ydl.download(kind, url)
 
     def handle_next(self):
         print "Swithc to next track"
@@ -90,19 +91,28 @@ class RadioApi(ApiHandler):
 
     def handle_del(self):
         print "Delete current track"
-        current_track = self.source.current_track()
+        current_track = self.source.np()
         print "Deleting " + current_track
         shutil.move(current_track, self.trash_folder)
 
     def handle_np(self):
-        current_track = self.source.current_track()
+        current_track = self.source.np()
         np = '-'.join(parse_fn(current_track))
         print "Now playing " + np
         return np
 
-    def handle_add(self, local_file_path):
+    def handle_add(self, kind, local_file_path):
         print 'Adding local file ' + local_file_path
-        shutil.move(local_file_path, self.download_folder)
+
+        folder = self.kind_to_folder.get(kind)
+        if not folder:
+            print 'Unknown kind'
+            return
+
+        if not os.path.exists(folder):
+            os.mkdir(folder)
+
+        shutil.move(local_file_path, folder)
 
 
 if __name__ == '__main__':

@@ -1,13 +1,15 @@
-from Queue import Queue
 import httplib
-from base64 import b64encode
 import urllib
-import time
-import os
-from radiosource.meta import parse_fn
-from radiosource.recode import FfmpegRecoder
-from radiosource.throttle import Throttler, QueueReader
+from Queue import Queue
+from base64 import b64encode
 from threading import Thread
+
+import logging
+
+import os
+from radiosource.codec.recoder import Recoder
+from radiosource.meta import parse_fn
+from radiosource.throttle import Throttler, QueueReader
 
 __author__ = 'shaman'
 
@@ -35,6 +37,8 @@ class Streamer(object):
         self.url = url
         self.public = public
 
+        self.log = logging.getLogger("Streamer")
+
         self.__meta_updater = Thread(target=self.__wait_for_next_track)
         self.__meta_updater.setDaemon(True)
 
@@ -60,6 +64,7 @@ class Streamer(object):
 
             http.request('GET', '/admin/metadata?' + params, headers=headers)
             http.close()
+            self.log.info("Updated metadata on icecast")
 
     def update_meta(self, artist, title):
         self.__meta_queue.put((artist, title))
@@ -82,49 +87,56 @@ class Streamer(object):
         http.endheaders()
         return http
 
-    @staticmethod
-    def _disconnect(http):
+    def _disconnect(self, http):
         try:
             http.close()
         except Exception, ex:
-            print ex
+            self.log.exception("Error during closing http connection")
 
     def next(self):
         self.__next = True
-
 
     def __read_to_queue(self, q, block_size):
         """
         :type q: Queue.Queue
         :type block_size: int
         """
+        recoder = Recoder(bitrate=self.bitrate)
+
         while True:
             fn = self.source.next()
+            self.log.info("Playing %s" % fn)
 
-            ffmpeg_recoder = FfmpegRecoder(fn, bitrate=self.bitrate)
-            data_block = ffmpeg_recoder.read(block_size)
+            if recoder.is_encoder_finished():
+                self.log.warn("Recreating encoder process")
+                recoder.make_output_process()
 
+            recoder.make_input_process(fn)
+            data_block = recoder.read(block_size)
             (artist, title) = parse_fn(fn)
             self.update_meta(artist, title)
 
-            while data_block and os.path.exists(fn) and not self.__next:
-                q.put(data_block)
+            while os.path.exists(fn) and not self.__next:
+
+                if data_block:
+                    q.put(data_block)
                 try:
-                    data_block = ffmpeg_recoder.read(block_size)
+                    data_block = recoder.read(block_size)
+                    if not data_block and (recoder.is_decoder_finished() or recoder.is_encoder_finished()):
+                        break
+
                 except KeyboardInterrupt as e:
-                    ffmpeg_recoder.close()
+                    self.log.info("got ^C, closing")
+                    recoder.close()
                     return
                 except Exception as e:
-                    print e
-                    try:
-                        ffmpeg_recoder.close()
-                    except:
-                        pass
-
+                    self.log.exception("Error during recoding")
                     break
 
+            self.log.info("recoder.kill_source_process() start")
+            recoder.kill_src_process()
+            self.log.info("recoder.kill_source_process() done")
             if self.__next:
-                ffmpeg_recoder.close()
                 self.__next = False
 
     def stream(self):
@@ -139,8 +151,6 @@ class Streamer(object):
         reading_thread.setDaemon(True)
         reading_thread.start()
 
-        time.sleep(2)
-
         http = None
         while True:
             queue_reader = QueueReader(q)
@@ -154,7 +164,7 @@ class Streamer(object):
                 try:
                     http.send(datablock)
                 except IOError, ex:
-                    print ex
+                    self.log.exception("I/O error during communication with icecast server")
                     self._disconnect(http)
                     http = self._connect()
                     continue
@@ -165,4 +175,4 @@ class Streamer(object):
                     throttler.close()
                     return
                 except Exception as e:
-                    print e
+                    self.log.exception("Error during reading from throttler")
