@@ -6,6 +6,8 @@ import fcntl
 
 import time
 
+import logging
+
 import os
 from radiosource.codec.copystream import CopyStream
 
@@ -16,6 +18,7 @@ def prepare_cmdline(cmdline, **params):
 
 class Recoder(object):
     def __init__(self, bitrate=128):
+        self.log = logging.getLogger('Recoder')
         self.bitrate = bitrate
         self.copystream = CopyStream()
         self.src = None
@@ -47,15 +50,23 @@ class Recoder(object):
         return True
 
     def read(self, n=-1):
+        exitcode = self.dst.poll()
+        if exitcode is not None:
+            self.log.warn('Output process died with %d' % exitcode)
+            self.make_output_process()
+            time.sleep(0.5)
 
         try:
             return self.dst.stdout.read(n)
         except IOError as e:
             if e.errno == 11:
                 time.sleep(0.2)
-                return ''
             else:
-                raise
+                self.log.exception("I/O error while read")
+            return ''
+        except Exception as e:
+            self.log.exception("Other error while read")
+            return ''
 
     def stop(self):
         self.src.send_signal(signal.SIGTERM)

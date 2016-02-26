@@ -124,7 +124,7 @@ class Streamer(object):
                     q.put(data_block)
                 try:
                     data_block = recoder.read(block_size)
-                    if not data_block and recoder.is_file_finished():
+                    if not data_block and (recoder.is_file_finished() or recoder.is_encoder_finished()):
                         break
 
                 except KeyboardInterrupt as e:

@@ -1,14 +1,31 @@
-import sys
-from StringIO import StringIO
-import traceback
+import code
 import datetime
-import daemon
 import logging
+import signal
+import sys
+import traceback
+from StringIO import StringIO
+
+import daemon
 from radiosource import DEFAULT_KIND, MIX_KIND
 from radiosource.api.api_handler import RadioApi
 from radiosource.config import Config
 from radiosource.source import DirectorySource, MultiplexingRuleSource
 from radiosource.streaming import Streamer
+
+
+def resque(sig, frame):
+    """Interrupt running process, and provide a python prompt for
+    interactive debugging."""
+    d = {'_frame': frame}  # Allow access to frame object.
+    d.update(frame.f_globals)  # Unless shadowed by global
+    d.update(frame.f_locals)
+
+    i = code.InteractiveConsole(d)
+    message = "Signal received : entering python shell.\nTraceback:\n"
+    message += ''.join(traceback.format_stack(frame))
+    i.interact(message)
+
 
 __author__ = 'shaman'
 
@@ -24,6 +41,7 @@ if __name__ == "__main__":
     else:
         handler = logging.StreamHandler()
 
+    signal.signal(signal.SIGUSR1, resque)  # Register handler
     formatter = logging.Formatter(fmt='%(asctime)s: (%(name)s) [%(levelname)s] %(message)s')
     handler.setFormatter(formatter)
     handler.setLevel(logging.DEBUG)
