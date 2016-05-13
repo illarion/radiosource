@@ -23,18 +23,27 @@ class Recoder(object):
         self.make_output_process()
 
     def make_output_process(self):
+        try:
+            log_file = open('/var/log/radio_oggenc.log', mode='w')
+        except IOError:
+            log_file = open('/dev/null', mode='w')
+
         p = Popen(prepare_cmdline('oggenc - -b {bitrate} --managed -o -', bitrate=self.bitrate),
                   stdin=subprocess.PIPE,
                   stdout=subprocess.PIPE,
-                  stderr=open('/var/log/radio_oggenc.log', mode='w')
+                  stderr=log_file
                   )
 
         self.copystream.set_destination_process(p)
         self.dst = p
 
     def make_input_process(self, path):
+        try:
+            log_file = open('/var/log/radio_ffmpeg.log', mode='w')
+        except IOError:
+            log_file = open('/dev/null', mode='w')
         p = Popen(prepare_cmdline('ffmpeg -i "{input}" -acodec pcm_s16le -ac 2 -f wav pipe:1', input=path),
-                  stdout=subprocess.PIPE, stderr=open('/var/log/radio_ffmpeg.log', mode='w'))
+                  stdout=subprocess.PIPE, stderr=log_file)
 
         self.copystream.set_source_process(p)
         self.src = p

@@ -49,13 +49,13 @@ class Streamer(object):
 
     def __wait_for_next_track(self):
         while True:
-            artist, title = self.__meta_queue.get()
+            track_name = self.__meta_queue.get()
             http = httplib.HTTPConnection(self.icecast)
 
             params = urllib.urlencode({
                 'mode': 'updinfo',
                 'mount': self.point,
-                'song': '{a} - {t}'.format(a=artist, t=title)
+                'song': track_name
             })
 
             headers = {
@@ -66,8 +66,8 @@ class Streamer(object):
             http.close()
             self.log.info("Updated metadata on icecast")
 
-    def update_meta(self, artist, title):
-        self.__meta_queue.put((artist, title))
+    def update_meta(self, track_name):
+        self.__meta_queue.put(track_name)
 
     def _connect(self):
         http = httplib.HTTPConnection(self.icecast)
@@ -113,8 +113,8 @@ class Streamer(object):
 
             recoder.make_input_process(fn)
             data_block = recoder.read(block_size)
-            (artist, title) = parse_fn(fn)
-            self.update_meta(artist, title)
+            track_name = parse_fn(fn)
+            self.update_meta(track_name)
 
             while os.path.exists(fn) and not self.__next:
 

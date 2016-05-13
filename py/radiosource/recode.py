@@ -13,12 +13,9 @@ class FfmpegRecoder(object):
     def __init__(self, input_file_name, bitrate=128):
         self.input_file_name = input_file_name
         self.bitrate = bitrate
-        artist, title = meta.parse_fn(input_file_name)
 
         cmdlines = [x.format(input=input_file_name,
-                             bitrate=bitrate,
-                             title=title,
-                             artist=artist) for x in FfmpegRecoder.CMD]
+                             bitrate=bitrate) for x in FfmpegRecoder.CMD]
 
         null = open('/dev/null', mode='w')
 

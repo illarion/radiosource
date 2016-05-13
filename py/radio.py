@@ -72,12 +72,12 @@ if __name__ == "__main__":
     }
 
 
-    def mix_rule():
-        utcnow = datetime.datetime.utcnow()
-        return (20 <= utcnow.hour <= 23) or (0 <= utcnow.hour <= 6)
+    # def mix_rule():
+    #     utcnow = datetime.datetime.utcnow()
+    #     return (20 <= utcnow.hour <= 23) or (0 <= utcnow.hour <= 6)
+    #source = MultiplexingRuleSource(default_source, [(mixes_source, mix_rule)])
 
-
-    source = MultiplexingRuleSource(default_source, [(mixes_source, mix_rule)])
+    source = default_source
 
     streamer = Streamer(source,
                         password=conf.get('main', 'password'),

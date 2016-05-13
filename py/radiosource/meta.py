@@ -2,12 +2,13 @@ __author__ = 'shaman'
 
 
 def parse_fn(fn):
-
-    fn = fn.split('/')[-1]
-    fn = fn.replace('_', ' ')
-    fn = '.'.join(fn.split('.')[:-1])
-    if '-' not in fn:
-        return '', fn.strip()
-
-    fn = fn.split('-', 1)
-    return tuple([part.strip() for part in fn])
+    """
+    >>> parse_fn('/files/path/Omni Trio - Renegate Snares.ogg')
+    'Omni Trio - Renegate Snares'
+    >>> parse_fn('/files/path/Renegate Snares by Omni Trio.ogg')
+    'Renegate Snares by Omni Trio'
+    """
+    fn = fn.split('/')[-1]  # remove all previous path
+    fn = fn.replace('_', ' ')  # remove underscores
+    fn = '.'.join(fn.split('.')[:-1])  # remove extension
+    return fn.strip()
