@@ -6,6 +6,8 @@ from threading import Thread
 
 import logging
 
+import time
+
 import os
 from radiosource.codec.recoder import Recoder
 from radiosource.meta import parse_fn
@@ -50,28 +52,52 @@ class Streamer(object):
     def __wait_for_next_track(self):
         while True:
             track_name = self.__meta_queue.get()
-            http = httplib.HTTPConnection(self.icecast)
+            time.sleep(0.5)
+            try:
+                http = httplib.HTTPConnection(self.icecast)
 
-            params = urllib.urlencode({
-                'mode': 'updinfo',
-                'mount': self.point,
-                'song': track_name
-            })
+                params = urllib.urlencode({
+                    'mode': 'updinfo',
+                    'mount': self.point,
+                    'song': track_name
+                })
 
-            headers = {
-                "Authorization": 'Basic ' + b64encode('source:%s' % self.password),
-            }
+                headers = {
+                    "Authorization": 'Basic ' + b64encode('source:%s' % self.password),
+                }
 
-            http.request('GET', '/admin/metadata?' + params, headers=headers)
-            http.close()
-            self.log.info("Updated metadata on icecast")
+                http.request('GET', '/admin/metadata?' + params, headers=headers)
+                self.log.info("Updated metadata on icecast")
+            except Exception as ex:
+                self.log('Unable to update metadata')
+                time.sleep(1)
+                self.__meta_queue.put(track_name)
+            finally:
+                http.close()
 
     def update_meta(self, track_name):
         self.__meta_queue.put(track_name)
 
-    def _connect(self):
-        http = httplib.HTTPConnection(self.icecast)
-        http.connect()
+    def _connect(self, retries=None):
+        attempt = 1
+        http = None
+
+        while True:
+            try:
+                http = httplib.HTTPConnection(self.icecast)
+                http.connect()
+                break
+            except Exception as ex:
+                self.log.error("Unable to connect to Icecast server")
+                time.sleep(1)
+                attempt += 1
+
+                if retries and attempt > retries:
+                    self.log.error("Cound not establish connection in %d attempts" % retries)
+                    return None
+
+        assert http is not None
+        self.log.info("Connected to icecast server after %d attempts" % attempt)
 
         http.putrequest('SOURCE', self.point)
         http.putheader("content-type", "audio/ogg")
@@ -83,8 +109,14 @@ class Streamer(object):
         http.putheader("ice-public", "1" if self.public else "0")
         http.putheader("ice-description", self.description)
         http.putheader("ice-audio-info", "ice-samplerate=44100;ice-bitrate={br};ice-channels=2".format(br=self.bitrate))
-
         http.endheaders()
+
+        if self.source:
+            np = self.source.np()
+            if np:
+                track_name = parse_fn(np)
+                self.update_meta(track_name)
+
         return http
 
     def _disconnect(self, http):
@@ -164,7 +196,7 @@ class Streamer(object):
                 try:
                     http.send(datablock)
                 except IOError, ex:
-                    self.log.exception("I/O error during communication with icecast server")
+                    self.log.exception("I/O error during sending datablock to icecast server")
                     self._disconnect(http)
                     http = self._connect()
                     continue
