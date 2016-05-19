@@ -139,10 +139,6 @@ class Streamer(object):
             fn = self.source.next()
             self.log.info("Playing %s" % fn)
 
-            if recoder.is_encoder_finished():
-                self.log.warn("Recreating encoder process")
-                recoder.make_output_process()
-
             recoder.make_input_process(fn)
             data_block = recoder.read(block_size)
             track_name = parse_fn(fn)
@@ -154,7 +150,14 @@ class Streamer(object):
                     q.put(data_block)
                 try:
                     data_block = recoder.read(block_size)
-                    if not data_block and (recoder.is_decoder_finished() or recoder.is_encoder_finished()):
+
+                    if not data_block:
+                        while not recoder.is_decoder_finished():
+                            data_block = recoder.read(block_size)
+                            if data_block:
+                                break
+
+                    if not data_block:
                         break
 
                 except KeyboardInterrupt as e:

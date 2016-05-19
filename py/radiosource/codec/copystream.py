@@ -85,6 +85,8 @@ class CopyStream(object):
         self._source_ready.set()
 
     def set_destination_process(self, process):
+        self._destination_ready.clear()
+
         fd = process.stdout.fileno()
         fl = fcntl.fcntl(fd, fcntl.F_GETFL)  # get flags
         fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)  # set flags + NON_BLOCKING

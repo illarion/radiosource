@@ -1,10 +1,10 @@
-import shlex
-import subprocess
-import signal
-import time
 import logging
-
+import shlex
+import signal
+import subprocess
+import time
 from subprocess import Popen
+
 from radiosource.codec.copystream import CopyStream
 
 
@@ -20,15 +20,16 @@ class Recoder(object):
         self.src = None
         self.dst = None
 
-        self.make_output_process()
+        self.__make_output_process()
 
-    def make_output_process(self):
+    def __make_output_process(self):
+        self.log.info('Maiking output process')
         try:
             log_file = open('/var/log/radio_oggenc.log', mode='w')
         except IOError:
-            log_file = open('/dev/null', mode='w')
+            log_file = None
 
-        p = Popen(prepare_cmdline('oggenc - -b {bitrate} --managed -o -', bitrate=self.bitrate),
+        p = Popen(prepare_cmdline('oggenc - -r --ignorelength -b {bitrate} --managed -o -', bitrate=self.bitrate),
                   stdin=subprocess.PIPE,
                   stdout=subprocess.PIPE,
                   stderr=log_file
@@ -41,7 +42,7 @@ class Recoder(object):
         try:
             log_file = open('/var/log/radio_ffmpeg.log', mode='w')
         except IOError:
-            log_file = open('/dev/null', mode='w')
+            log_file = None
         p = Popen(prepare_cmdline('ffmpeg -i "{input}" -acodec pcm_s16le -ac 2 -f wav pipe:1', input=path),
                   stdout=subprocess.PIPE, stderr=log_file)
 
@@ -52,8 +53,7 @@ class Recoder(object):
         exitcode = self.dst.poll()
         if exitcode is not None:
             self.log.warn('Output process died with %d' % exitcode)
-            self.make_output_process()
-            time.sleep(0.5)
+            self.__make_output_process()
 
         try:
             return self.dst.stdout.read(n)
@@ -75,7 +75,6 @@ class Recoder(object):
         if self.dst is not None and self.dst.poll() is None:
             self.dst.send_signal(signal.SIGKILL)
 
-
     def is_decoder_finished(self):
         return self.copystream.is_source_dead()
 
@@ -85,4 +84,3 @@ class Recoder(object):
     def close(self):
         self.kill_src_process()
         self.kill_dst_process()
-
