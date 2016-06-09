@@ -4,8 +4,6 @@ import threading
 import logging
 import os
 
-MAX_RECENT_FILES = 30
-
 __author__ = 'shaman'
 
 
@@ -60,6 +58,7 @@ class DirectorySource(Source):
 
         self.rescanner = threading.Thread(target=self.scan)
         self.rescanner.start()
+        self.max_recent_files = None
 
     def scan(self):
         while True:
@@ -69,6 +68,8 @@ class DirectorySource(Source):
                 scanned.update([os.path.join(dirpath, filename)
                                for filename in filenames
                                for ext in self.extensions if filename.endswith(ext)])
+
+            self.max_recent_files = len(scanned) / 2
 
             available = scanned - set(self.recent_files)
 
@@ -86,8 +87,9 @@ class DirectorySource(Source):
             f = self.next_file.get()
 
             try:
-                if len(self.recent_files) > MAX_RECENT_FILES:
-                    self.recent_files.pop(0)
+                while len(self.recent_files) > self.max_recent_files:
+                    if self.recent_files:
+                        self.recent_files.pop(0)
             except IndexError:
                 pass
 

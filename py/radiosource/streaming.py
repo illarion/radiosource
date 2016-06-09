@@ -52,7 +52,7 @@ class Streamer(object):
     def __wait_for_next_track(self):
         while True:
             track_name = self.__meta_queue.get()
-            time.sleep(0.5)
+            time.sleep(1)
             try:
                 http = httplib.HTTPConnection(self.icecast)
 
