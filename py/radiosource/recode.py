@@ -3,7 +3,7 @@ import meta
 
 
 class FfmpegRecoder(object):
-    CMD = ('ffmpeg -i "{input}" -acodec pcm_s16le -ac 2 -f wav pipe:1',
+    CMD = ('ffmpeg -i "{input}" -acodec pcm_s16le -ac 2 -f s16le pipe:1',
            'oggenc - -b {bitrate} --managed -o -')
 
     # CMD = 'ffmpeg -i "{input}" -metadata title="{title}" -metadata artist="{artist}" -vn -codec:a libvorbis -b:a {
