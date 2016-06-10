@@ -11,7 +11,7 @@ from radiosource import DEFAULT_KIND, MIX_KIND
 from radiosource.api.api_handler import RadioApi
 from radiosource.config import Config
 from radiosource.source import DirectorySource, MultiplexingRuleSource
-from radiosource.streaming import Streamer
+from radiosource.streaming import IcecastHttpStreamer
 
 
 def resque(sig, frame):
@@ -79,16 +79,16 @@ if __name__ == "__main__":
 
     source = default_source
 
-    streamer = Streamer(source,
-                        password=conf.get('main', 'password'),
-                        icecast=conf.get('main', 'icecast_host_port'),
-                        point=conf.get('main', 'point'),
-                        bitrate=int(conf.get('main', 'bitrate')),
-                        genre=conf.get('main', 'genre', 'Various'),
-                        name=conf.get('main', 'name', ''),
-                        description=conf.get('main', 'description', ''),
-                        url=conf.get('main', 'url', ''),
-                        public=conf.get_boolean('main', 'public', False))
+    streamer = IcecastHttpStreamer(source,
+                               password=conf.get('main', 'password'),
+                               icecast=conf.get('main', 'icecast_host_port'),
+                               point=conf.get('main', 'point'),
+                               bitrate=int(conf.get('main', 'bitrate')),
+                               genre=conf.get('main', 'genre', 'Various'),
+                               name=conf.get('main', 'name', ''),
+                               description=conf.get('main', 'description', ''),
+                               url=conf.get('main', 'url', ''),
+                               public=conf.get_boolean('main', 'public', False))
 
     api_handler = RadioApi(kind_to_folder, source, streamer, conf.get('main', 'trash'))
 
