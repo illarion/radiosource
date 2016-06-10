@@ -63,23 +63,15 @@ if __name__ == "__main__":
     default_folder = conf.get('main', 'files')
     mixes_folder = conf.get('main', 'files_mixes')
 
-    default_source = DirectorySource(default_folder)
-    mixes_source = DirectorySource(mixes_folder)
+    default_source = DirectorySource(default_folder,
+                                     recent_files_storage=conf.get('main', 'recent_files_storage', '/tmp/radiorecent'))
 
     kind_to_folder = {
         DEFAULT_KIND: default_folder,
         MIX_KIND: mixes_folder
     }
 
-
-    # def mix_rule():
-    #     utcnow = datetime.datetime.utcnow()
-    #     return (20 <= utcnow.hour <= 23) or (0 <= utcnow.hour <= 6)
-    #source = MultiplexingRuleSource(default_source, [(mixes_source, mix_rule)])
-
-    source = default_source
-
-    streamer = IcecastHttpStreamer(source,
+    streamer = IcecastHttpStreamer(default_source,
                                password=conf.get('main', 'password'),
                                icecast=conf.get('main', 'icecast_host_port'),
                                point=conf.get('main', 'point'),
@@ -90,6 +82,6 @@ if __name__ == "__main__":
                                url=conf.get('main', 'url', ''),
                                public=conf.get_boolean('main', 'public', False))
 
-    api_handler = RadioApi(kind_to_folder, source, streamer, conf.get('main', 'trash'))
+    api_handler = RadioApi(kind_to_folder, default_source, streamer, conf.get('main', 'trash'))
 
     streamer.stream()

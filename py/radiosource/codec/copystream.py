@@ -70,9 +70,12 @@ class CopyStream(object):
                     continue
 
                 dst.write(data)
-
+            except IOError as e:
+                self.log.info("Destination process is not consuming data")
+                self._destination_gone.set()
+                self._destination_ready.clear()
             except Exception as e:
-                self.log.exception("Error when tried to write to destination process")
+                self.log.exception("Other error when tried to write to destination process")
                 self._destination_gone.set()
                 self._destination_ready.clear()
 

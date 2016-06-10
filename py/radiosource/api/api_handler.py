@@ -97,7 +97,7 @@ class RadioApi(ApiHandler):
 
     def handle_np(self):
         current_track = self.source.np()
-        np = '-'.join(parse_fn(current_track))
+        np = parse_fn(current_track)
         print "Now playing " + np
         return np
 

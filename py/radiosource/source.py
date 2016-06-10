@@ -1,3 +1,4 @@
+import pickle
 from Queue import Queue
 import random
 import threading
@@ -8,7 +9,6 @@ __author__ = 'shaman'
 
 
 class Source(object):
-
     def np(self):
         pass
 
@@ -47,10 +47,16 @@ class MultiplexingRuleSource(Source):
 
 
 class DirectorySource(Source):
-
-    def __init__(self, root, extensions=('.ogg', '.mp3')):
+    def __init__(self, root, extensions=('.ogg', '.mp3'), recent_files_storage='/tmp/radiorecent'):
         self.log = logging.getLogger('DirectorySource')
-        self.recent_files = []
+        self.recent_files_storage = recent_files_storage
+
+        try:
+            with open(recent_files_storage, 'r') as f:
+                self.recent_files = pickle.load(f)
+        except IOError:
+            self.recent_files = []
+
         self.next_file = Queue(maxsize=1)
         self.current_track = None
         self.root = root
@@ -66,8 +72,8 @@ class DirectorySource(Source):
 
             for dirpath, dirnames, filenames in os.walk(self.root, followlinks=True):
                 scanned.update([os.path.join(dirpath, filename)
-                               for filename in filenames
-                               for ext in self.extensions if filename.endswith(ext)])
+                                for filename in filenames
+                                for ext in self.extensions if filename.endswith(ext)])
 
             self.max_recent_files = len(scanned) / 2
 
@@ -76,7 +82,7 @@ class DirectorySource(Source):
             if len(available) == 0:
                 available = scanned
 
-            next_file_index = random.randint(0, len(available)-1)
+            next_file_index = random.randint(0, len(available) - 1)
             self.next_file.put(list(available)[next_file_index])
 
     def np(self):
@@ -93,10 +99,21 @@ class DirectorySource(Source):
             except IndexError:
                 pass
 
+            self.__store_recent_files()
+
             if os.path.exists(f):
                 self.current_track = f
                 self.recent_files.append(f)
+                self.__store_recent_files()
                 return f
+
+    def __store_recent_files(self):
+        try:
+            with open(self.recent_files_storage, 'w') as f:
+                pickle.dump(self.recent_files, f)
+        except IOError:
+            pass
+
 
     def reset(self):
         self.recent_files = []
