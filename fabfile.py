@@ -7,14 +7,6 @@ __author__ = 'shaman'
 from fabric.api import *
 
 
-def _prepare_requirements():
-    local('pip freeze > requirements.txt')
-
-
-def _cleanup():
-    local('rm -f requirements.txt')
-
-
 def _virtualenv(command, pty=True):
     run('source ./env/bin/activate && %s' % command, pty=pty)
 
@@ -34,6 +26,10 @@ def start(folder=FOLDER, ):
     with cd(folder):
         _virtualenv('python py/radio.py', pty=False)
         _virtualenv('python py/radio_webinterface.py', pty=False)
+
+def restart(folder=FOLDER):
+    stop(folder)
+    start(folder)
 
 
 def upload(folder=FOLDER):
@@ -57,9 +53,7 @@ def watch():
 
 
 def deploy(folder=FOLDER):
-    _prepare_requirements()
     stop(folder)
     upload(folder)
-    _cleanup()
     _mkenv(folder)
     start(folder)

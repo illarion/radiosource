@@ -50,7 +50,7 @@ class MetaUpdater(object):
                 http.request('GET', '/admin/metadata?' + params, headers=headers)
                 self.log.info("Updated metadata on icecast")
             except Exception as ex:
-                self.log('Unable to update metadata')
+                self.log.info('Unable to update metadata')
                 time.sleep(1)
                 self.__meta_queue.put(track_name)
             finally:
@@ -187,12 +187,11 @@ class IcecastHttpStreamer(Streamer):
 
         http.putrequest('PUT', self.point)
         http.putheader("Authorization", 'Basic ' + b64encode('source:%s' % self.password))
-        http.putheader("Content-type", "audio/ogg")
+        http.putheader("Content-type", "application/ogg")
         http.putheader("Accept", "*/*")
         http.putheader("Ice-name", self.name)
         http.putheader("Ice-url", self.url)
         http.putheader("Ice-genre", self.genre)
-        http.putheader("Ice-private", "0" if self.public else "1")
         http.putheader("Ice-public", "1" if self.public else "0")
         http.putheader("Ice-description", self.description)
         http.putheader("Ice-audio-info", "ice-samplerate=44100;ice-bitrate={br};ice-channels=2".format(br=self.bitrate))
