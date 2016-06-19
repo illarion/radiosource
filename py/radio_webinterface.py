@@ -7,7 +7,6 @@ from werkzeug.utils import secure_filename, redirect
 from functools import wraps
 from radiosource import config
 from gevent.wsgi import WSGIServer
-
 import sys
 
 reload(sys)
@@ -25,9 +24,9 @@ class RadioClient(object):
     def _after(self):
         self.sock.close()
 
-    def download(self, kind, url):
+    def download(self, url):
         self._before()
-        self.sock.send('download %s %s\n' % (kind, url))
+        self.sock.send('download %s\n' % url)
         result = self.sock.recv(1024)
         self._after()
         return result
@@ -35,13 +34,6 @@ class RadioClient(object):
     def next(self):
         self._before()
         self.sock.send('next\n')
-        result = self.sock.recv(1024)
-        self._after()
-        return result
-
-    def reload(self):
-        self._before()
-        self.sock.send('reload\n')
         result = self.sock.recv(1024)
         self._after()
         return result
@@ -60,9 +52,9 @@ class RadioClient(object):
         self._after()
         return result
 
-    def add(self, kind, local_file_path):
+    def add(self, local_file_path):
         self._before()
-        self.sock.send('add %s %s\n' % (kind, local_file_path))
+        self.sock.send('add %s\n' % local_file_path)
         result = self.sock.recv(1024)
         self._after()
         return result
@@ -97,6 +89,7 @@ def requires_auth(f):
         if not auth or not check_auth(auth.username, auth.password):
             return authenticate()
         return f(*args, **kwargs)
+
     return decorated
 
 
@@ -118,13 +111,12 @@ def np():
 @requires_auth
 def upload():
     f = request.files['file']
-    kind = request.form['submit']
 
     if f:
         filename = secure_filename(f.filename)
         local_file_path = os.path.join('/tmp/', filename)
         f.save(local_file_path)
-        client.add(kind, local_file_path)
+        client.add(local_file_path)
         return redirect("/")
 
 
@@ -132,8 +124,7 @@ def upload():
 @requires_auth
 def download_url():
     url = request.form['url']
-    kind = request.form['submit']
-    client.download(kind, url)
+    client.download(url)
     return redirect("/")
 
 
@@ -148,13 +139,6 @@ def del_np():
 @requires_auth
 def next():
     client.next()
-    return redirect("/")
-
-
-@app.route('/reload', methods=['POST'])
-@requires_auth
-def reload():
-    client.reload()
     return redirect("/")
 
 

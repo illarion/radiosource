@@ -62,7 +62,7 @@ class ApiHandler(object):
 
 
 class RadioApi(ApiHandler):
-    def __init__(self, kind_to_folder, source, streamer, trash_folder):
+    def __init__(self, source, streamer, download_folder, trash_folder):
         super(RadioApi, self).__init__()
         """
         :type download_folder: str
@@ -72,21 +72,16 @@ class RadioApi(ApiHandler):
         self.source = source
         self.streamer = streamer
         self.trash_folder = trash_folder
-        self.kind_to_folder = kind_to_folder
+        self.download_folder = download_folder
 
-        self.ydl = Ydl(kind_to_folder)
+        self.ydl = Ydl(download_folder)
 
-    def handle_download(self, kind, url):
+    def handle_download(self, url):
         print "Will download " + url
-        self.ydl.download(kind, url)
+        self.ydl.download(url)
 
     def handle_next(self):
         print "Swithc to next track"
-        self.streamer.next()
-
-    def handle_reload(self):
-        print "Reload all tracks"
-        self.source.reset()
         self.streamer.next()
 
     def handle_del(self):
@@ -101,18 +96,13 @@ class RadioApi(ApiHandler):
         print "Now playing " + np
         return np
 
-    def handle_add(self, kind, local_file_path):
+    def handle_add(self, local_file_path):
         print 'Adding local file ' + local_file_path
 
-        folder = self.kind_to_folder.get(kind)
-        if not folder:
-            print 'Unknown kind'
-            return
+        if not os.path.exists(self.download_folder):
+            os.mkdir(self.download_folder)
 
-        if not os.path.exists(folder):
-            os.mkdir(folder)
-
-        shutil.move(local_file_path, folder)
+        shutil.move(local_file_path, self.download_folder)
 
 
 if __name__ == '__main__':

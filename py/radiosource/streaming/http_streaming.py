@@ -155,7 +155,7 @@ class IcecastHttpStreamer(Streamer):
 
         self.log = logging.getLogger("Streamer")
 
-        self.__next = False
+        self.__next = threading.Event()
 
         self.meta_updater = MetaUpdater(icecast, point, password)
 
@@ -214,7 +214,7 @@ class IcecastHttpStreamer(Streamer):
             self.log.exception("Error during closing http connection")
 
     def next(self):
-        self.__next = True
+        self.__next.set()
 
     def stream(self):
         blocksize = 8192
@@ -233,6 +233,10 @@ class IcecastHttpStreamer(Streamer):
 
             datablock = throttler.read(blocksize)
             while datablock:
+                if self.__next.is_set():
+                    recoding_thread.next()
+                    self.__next.clear()
+
                 try:
                     http.send(datablock)
                 except IOError, ex:

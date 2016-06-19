@@ -13,8 +13,8 @@ import logging
 class Ydl(object):
     CMD = "youtube-dl --no-playlist -o '%(title)s.%(ext)s' --audio-quality 0 --extract-audio --audio-format vorbis \"{url}\""
 
-    def __init__(self, kind_to_download_folder):
-        self.kind_to_download_folder = kind_to_download_folder
+    def __init__(self, download_folder):
+        self.download_folder = download_folder
         self.log = logging.getLogger('Ydl')
         self.processes = LifoQueue()
         self.watcher = threading.Thread(target=self._cleanup, args=(self.processes, self.log))
@@ -33,14 +33,11 @@ class Ydl(object):
                 log.error('Something went wrong when downloading %s, return code is %d' % (url, retcode))
             log.info("Finished downloading " + url)
 
-    def download(self, kind, url):
+    def download(self, url):
         cmd = Ydl.CMD.format(url=url)
         args = shlex.split(cmd)
         self.log.info("Downloading " + url)
-        folder = self.kind_to_download_folder.get(kind, None)
-        if not folder:
-            self.log.error('Unknown folder for kind %s' % kind)
-            return
+        folder = self.download_folder
 
         if not os.path.exists(folder):
             # noinspection PyBroadException
