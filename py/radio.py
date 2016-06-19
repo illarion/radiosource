@@ -5,6 +5,7 @@ from StringIO import StringIO
 import daemon
 from radiosource.api.api_handler import RadioApi
 from radiosource.config import Config
+from radiosource.http.tunein import TuneInUpdater
 from radiosource.source import DirectorySource
 from radiosource.streaming import IcecastHttpStreamer
 
@@ -42,10 +43,20 @@ if __name__ == "__main__":
 
     files_folder = conf.get('main', 'files')
     trash_folder = conf.get('main', 'trash')
-    default_source = DirectorySource(files_folder,
-                                     recent_files_storage=conf.get('main', 'recent_files_storage', '/tmp/radiorecent'))
 
-    streamer = IcecastHttpStreamer(default_source,
+    source = DirectorySource(files_folder,
+                             recent_files_storage=conf.get('main', 'recent_files_storage', '/tmp/radiorecent'))
+
+    #tunein
+    station_id = conf.get('tunein', 'station_id', None)
+    partner_id = conf.get('tunein', 'partner_id', None)
+    partner_key = conf.get('tunein', 'partner_key', None)
+
+    if all((station_id, partner_key, partner_id)):
+        tunein = TuneInUpdater(station_id, partner_id, partner_key)
+        source.subscribe_on_next(lambda track: tunein.update(track))
+
+    streamer = IcecastHttpStreamer(source,
                                    password=conf.get('main', 'password'),
                                    icecast=conf.get('main', 'icecast_host_port'),
                                    point=conf.get('main', 'point'),
@@ -56,6 +67,6 @@ if __name__ == "__main__":
                                    url=conf.get('main', 'url', ''),
                                    public=conf.get_boolean('main', 'public', False))
 
-    api_handler = RadioApi(default_source, streamer, files_folder, trash_folder)
+    api_handler = RadioApi(source, streamer, files_folder, trash_folder)
 
     streamer.stream()

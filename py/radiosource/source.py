@@ -9,6 +9,11 @@ __author__ = 'shaman'
 
 
 class Source(object):
+
+    def __init__(self):
+        super(Source, self).__init__()
+        self.on_next = []
+
     def np(self):
         pass
 
@@ -18,6 +23,9 @@ class Source(object):
     def reset(self):
         pass
 
+    def subscribe_on_next(self, callback):
+        self.on_next.append(callback)
+
 
 class MultiplexingRuleSource(Source):
     def __init__(self, default_source, source_rules):
@@ -26,6 +34,7 @@ class MultiplexingRuleSource(Source):
         :param source_rules:
         :return:
         """
+        super(MultiplexingRuleSource, self).__init__()
         self.default_source = default_source
         self.source_rules = source_rules
 
@@ -48,6 +57,7 @@ class MultiplexingRuleSource(Source):
 
 class DirectorySource(Source):
     def __init__(self, root, extensions=('.ogg', '.mp3'), recent_files_storage='/tmp/radiorecent'):
+        super(DirectorySource, self).__init__()
         self.log = logging.getLogger('DirectorySource')
         self.recent_files_storage = recent_files_storage
 
@@ -105,6 +115,12 @@ class DirectorySource(Source):
                 self.current_track = f
                 self.recent_files.append(f)
                 self.__store_recent_files()
+
+                for x in self.on_next:
+                    try:
+                        x(f)
+                    except Exception, e:
+                        self.log.exception()
                 return f
 
     def __store_recent_files(self):
@@ -113,7 +129,6 @@ class DirectorySource(Source):
                 pickle.dump(self.recent_files, f)
         except IOError:
             pass
-
 
     def reset(self):
         self.recent_files = []
