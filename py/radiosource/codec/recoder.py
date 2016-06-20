@@ -29,7 +29,7 @@ class Recoder(object):
         except IOError:
             log_file = None
 
-        p = Popen(prepare_cmdline('oggenc - --raw --raw-bits 16 --raw-chan 2 --raw-rate 44100  --raw-endianness 0 --ignorelength -b {bitrate} --managed -o -', bitrate=self.bitrate),
+        p = Popen(prepare_cmdline('oggenc - --raw --raw-bits 16 --raw-chan 2 --raw-rate 44100  --raw-endianness 0 --ignorelength -q 9 -o -',),
                   stdin=subprocess.PIPE,
                   stdout=subprocess.PIPE,
                   stderr=log_file

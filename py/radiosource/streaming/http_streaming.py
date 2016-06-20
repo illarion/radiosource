@@ -11,7 +11,7 @@ import os
 from radiosource.codec.recoder import Recoder
 from radiosource.meta import parse_fn
 from radiosource.streaming import Streamer
-from radiosource.throttle import Throttler, QueueReader
+from radiosource.throttle import OggsThrottler, QueueReader
 
 __author__ = 'shaman'
 
@@ -102,7 +102,7 @@ class RecodingThread(Thread):
             while os.path.exists(fn) and not self.__next.is_set():
 
                 if data_block:
-                    target_queue.put(data_block)
+                    target_queue.put(data_block, block=True)
                 try:
 
                     if self.__start_over_encoding.is_set():
@@ -217,8 +217,8 @@ class IcecastHttpStreamer(Streamer):
         self.__next.set()
 
     def stream(self):
-        blocksize = 8192
-        q = Queue(maxsize=5)
+        blocksize = 4000
+        q = Queue(maxsize=1)
 
         recoding_thread = RecodingThread(q, blocksize, self.source, self.bitrate, self.meta_updater)
         recoding_thread.start()
@@ -226,16 +226,17 @@ class IcecastHttpStreamer(Streamer):
         http = None
         while True:
             queue_reader = QueueReader(q)
-            throttler = Throttler(queue_reader, bitrate=self.bitrate)
+            throttler = OggsThrottler(queue_reader)
 
             if not http:
                 http = self._connect()
 
-            datablock = throttler.read(blocksize)
+            datablock = throttler.read()
             while datablock:
                 if self.__next.is_set():
                     recoding_thread.next()
                     self.__next.clear()
+                    continue
 
                 try:
                     http.send(datablock)
@@ -249,7 +250,7 @@ class IcecastHttpStreamer(Streamer):
                     continue
 
                 try:
-                    datablock = throttler.read(blocksize)
+                    datablock = throttler.read()
                 except KeyboardInterrupt as e:
                     throttler.close()
                     return

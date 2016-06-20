@@ -1,6 +1,7 @@
 import logging
 import sys
 import traceback
+from ConfigParser import NoSectionError
 from StringIO import StringIO
 import daemon
 from radiosource.api.api_handler import RadioApi
@@ -48,13 +49,16 @@ if __name__ == "__main__":
                              recent_files_storage=conf.get('main', 'recent_files_storage', '/tmp/radiorecent'))
 
     #tunein
-    station_id = conf.get('tunein', 'station_id', None)
-    partner_id = conf.get('tunein', 'partner_id', None)
-    partner_key = conf.get('tunein', 'partner_key', None)
+    try:
+        station_id = conf.get('tunein', 'station_id', None)
+        partner_id = conf.get('tunein', 'partner_id', None)
+        partner_key = conf.get('tunein', 'partner_key', None)
 
-    if all((station_id, partner_key, partner_id)):
-        tunein = TuneInUpdater(station_id, partner_id, partner_key)
-        source.subscribe_on_next(lambda track: tunein.update(track))
+        if all((station_id, partner_key, partner_id)):
+            tunein = TuneInUpdater(station_id, partner_id, partner_key)
+            source.subscribe_on_next(lambda track: tunein.update(track))
+    except NoSectionError:
+        pass
 
     streamer = IcecastHttpStreamer(source,
                                    password=conf.get('main', 'password'),
