@@ -41,14 +41,16 @@ class SimpleThrottler(object):
 
     def __init__(self, input, bitrate=128):  # 128 kbps
 
-        self.speed = (bitrate * 1024) / 8
+        self.speed = (bitrate * 1000) / 8
         self.input = input
 
         self.cnt = 0
         self.t0 = None
         self.log = logging.getLogger("Throttler")
 
-    def read(self, n=-1):
+    def read(self, n=None):
+        if n is None:
+            n=self.speed
 
         if self.t0 is None:
             self.t0 = time.time()

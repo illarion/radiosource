@@ -187,7 +187,7 @@ class IcecastHttpStreamer(Streamer):
 
         http.putrequest('PUT', self.point)
         http.putheader("Authorization", 'Basic ' + b64encode('source:%s' % self.password))
-        http.putheader("Content-type", "application/ogg")
+        http.putheader("Content-type", "audio/mpeg")
         http.putheader("Accept", "*/*")
         http.putheader("Ice-name", self.name)
         http.putheader("Ice-url", self.url)
