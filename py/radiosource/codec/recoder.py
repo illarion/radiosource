@@ -4,7 +4,6 @@ import signal
 import subprocess
 import time
 from subprocess import Popen
-
 from radiosource.codec.copystream import CopyStream
 
 
@@ -27,13 +26,25 @@ class Recoder(object):
         try:
             log_file = open('/var/log/radio_oggenc.log', mode='w')
         except IOError:
-            log_file = None
+            log_file = open('/tmp/radio_oggenc.log', mode='w')
 
-        p = Popen(prepare_cmdline('oggenc - --raw --raw-bits 16 --raw-chan 2 --raw-rate 44100  --raw-endianness 0 --ignorelength -b {bitrate} --managed -o -', bitrate=self.bitrate),
-                  stdin=subprocess.PIPE,
-                  stdout=subprocess.PIPE,
-                  stderr=log_file
-                  )
+        p = Popen(prepare_cmdline(
+            'lame -r --little-endian -b {} --cbr - -'.format(
+                self.bitrate), ),
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=log_file
+        )
+
+
+        # p = Popen(prepare_cmdline(
+        #     'oggenc - --raw --raw-bits 16 --raw-chan 2 --raw-rate 44100 --raw-endianness 0 '
+        #     '--ignorelength --managed -b {} -o -'.format(
+        #         self.bitrate), ),
+        #     stdin=subprocess.PIPE,
+        #     stdout=subprocess.PIPE,
+        #     stderr=log_file
+        # )
 
         self.copystream.set_destination_process(p)
         self.dst = p
@@ -42,7 +53,7 @@ class Recoder(object):
         try:
             log_file = open('/var/log/radio_ffmpeg.log', mode='w')
         except IOError:
-            log_file = None
+            log_file = open('/tmp/radio_ffmpeg.log', mode='w')
         p = Popen(prepare_cmdline('ffmpeg -i "{input}" -acodec pcm_s16le -ac 2 -f s16le pipe:1', input=path),
                   stdout=subprocess.PIPE, stderr=log_file)
 

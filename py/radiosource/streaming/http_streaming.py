@@ -11,7 +11,7 @@ import os
 from radiosource.codec.recoder import Recoder
 from radiosource.meta import parse_fn
 from radiosource.streaming import Streamer
-from radiosource.throttle import Throttler, QueueReader
+from radiosource.throttle import OggsThrottler, QueueReader, SimpleThrottler
 
 __author__ = 'shaman'
 
@@ -102,7 +102,7 @@ class RecodingThread(Thread):
             while os.path.exists(fn) and not self.__next.is_set():
 
                 if data_block:
-                    target_queue.put(data_block)
+                    target_queue.put(data_block, block=True)
                 try:
 
                     if self.__start_over_encoding.is_set():
@@ -187,7 +187,7 @@ class IcecastHttpStreamer(Streamer):
 
         http.putrequest('PUT', self.point)
         http.putheader("Authorization", 'Basic ' + b64encode('source:%s' % self.password))
-        http.putheader("Content-type", "application/ogg")
+        http.putheader("Content-type", "audio/mpeg")
         http.putheader("Accept", "*/*")
         http.putheader("Ice-name", self.name)
         http.putheader("Ice-url", self.url)
@@ -217,8 +217,8 @@ class IcecastHttpStreamer(Streamer):
         self.__next.set()
 
     def stream(self):
-        blocksize = 8192
-        q = Queue(maxsize=5)
+        blocksize = 4000
+        q = Queue(maxsize=1)
 
         recoding_thread = RecodingThread(q, blocksize, self.source, self.bitrate, self.meta_updater)
         recoding_thread.start()
@@ -226,32 +226,32 @@ class IcecastHttpStreamer(Streamer):
         http = None
         while True:
             queue_reader = QueueReader(q)
-            throttler = Throttler(queue_reader, bitrate=self.bitrate)
+            # throttler = OggsThrottler(queue_reader)
+            throttler = SimpleThrottler(queue_reader, bitrate=self.bitrate)
 
             if not http:
                 http = self._connect()
 
-            datablock = throttler.read(blocksize)
-            while datablock:
-                if self.__next.is_set():
-                    recoding_thread.next()
-                    self.__next.clear()
+            try:
+                while True:
+                    datablock = throttler.read()
+                    if self.__next.is_set():
+                        recoding_thread.next()
+                        self.__next.clear()
+                        continue
 
-                try:
-                    http.send(datablock)
-                except IOError, ex:
-                    self.log.exception("I/O error during sending datablock to icecast server")
-                    self._disconnect(http)
+                    try:
+                        http.send(datablock)
+                    except IOError, ex:
+                        self.log.exception("I/O error during sending datablock to icecast server")
+                        self._disconnect(http)
 
-                    recoding_thread.start_over_encoding()
+                        recoding_thread.start_over_encoding()
 
-                    http = self._connect()
-                    continue
-
-                try:
-                    datablock = throttler.read(blocksize)
-                except KeyboardInterrupt as e:
-                    throttler.close()
-                    return
-                except Exception as e:
-                    self.log.exception("Error during reading from throttler")
+                        http = self._connect()
+                        continue
+            except KeyboardInterrupt:
+                throttler.close()
+                return
+            except Exception:
+                self.log.exception("Error during reading from throttler")
