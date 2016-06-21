@@ -42,15 +42,12 @@ class OggsThrottler(object):
 
     def __init__(self, input):
 
-        self.blocksize = 1000
+        self.blocksize = 8000
         self.input = input
 
-        self.cnt = 0
         self.t0 = None
         self.g0 = None
-        self.dgp_prev = 0
         self.buffer = None
-        self.pause = 0
 
         self.log = logging.getLogger("Throttler")
 
@@ -84,48 +81,58 @@ class OggsThrottler(object):
             return None
 
     def read(self):
-        if self.pause > 0:
-            time.sleep(self.pause)
-            self.pause = 0
+        data = b''
+        sl = 1.4
+        old_diff = 0
+        while True:
+            try:
+                data += self.input.read(self.blocksize)
+            except Exception:
+                self.log.exception("Unable to read")
+                continue
 
-        try:
-            self.pause = 0
-
-            data = self.input.read(self.blocksize)
             position = self.find_magic(data)
-            if not position:
-                return data
+            if position is None:
+                continue
 
             gp = self.parse_page_header(data, position)
             if not gp:
-                return data
+                continue
 
             current_time = time.time()
             if self.t0 is None:
-                self.t0 = current_time
-                self.g0 = gp
-                return data
+                self.reset(current_time, gp)
 
             dt = current_time - self.t0
             dgp = gp - self.g0
 
             if dgp < 0:
-                self.t0 = current_time
-                self.g0 = gp
-                self.pause = 0
-                self.dgp_prev = 0
-                return data
+                print "reset"
+                self.reset(current_time, gp)
+                yield data
+                data = b''
+                continue
 
-            if dgp > self.dgp_prev:
-                self.dgp_prev = dgp
-                if dgp - dt > 0:
-                    self.pause = dgp - dt
+            cur_diff = dgp - dt
+            if cur_diff > 0:
+                if not old_diff:
+                    old_diff = cur_diff
 
-            return data
+                if cur_diff > old_diff:
+                    sl -= 0.01
+                elif cur_diff < old_diff:
+                    sl += 0.01
 
-        except IOError:
-            self.log.exception("I/O Error during read from source")
-            return ''
+                old_diff = cur_diff
+
+                time.sleep(sl)
+
+            yield data
+            data = b''
+
+    def reset(self, current_time, gp):
+        self.t0 = current_time
+        self.g0 = gp
 
     def close(self):
         self.input.close()

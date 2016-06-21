@@ -226,33 +226,30 @@ class IcecastHttpStreamer(Streamer):
         http = None
         while True:
             queue_reader = QueueReader(q)
-            throttler = OggsThrottler(queue_reader)
+            throttler = OggsThrottler(queue_reader).read()
 
             if not http:
                 http = self._connect()
 
-            datablock = throttler.read()
-            while datablock:
-                if self.__next.is_set():
-                    recoding_thread.next()
-                    self.__next.clear()
-                    continue
+            try:
+                for datablock in throttler:
+                    if self.__next.is_set():
+                        recoding_thread.next()
+                        self.__next.clear()
+                        continue
 
-                try:
-                    http.send(datablock)
-                except IOError, ex:
-                    self.log.exception("I/O error during sending datablock to icecast server")
-                    self._disconnect(http)
+                    try:
+                        http.send(datablock)
+                    except IOError, ex:
+                        self.log.exception("I/O error during sending datablock to icecast server")
+                        self._disconnect(http)
 
-                    recoding_thread.start_over_encoding()
+                        recoding_thread.start_over_encoding()
 
-                    http = self._connect()
-                    continue
-
-                try:
-                    datablock = throttler.read()
-                except KeyboardInterrupt as e:
-                    throttler.close()
-                    return
-                except Exception as e:
-                    self.log.exception("Error during reading from throttler")
+                        http = self._connect()
+                        continue
+            except KeyboardInterrupt:
+                throttler.close()
+                return
+            except Exception:
+                self.log.exception("Error during reading from throttler")
