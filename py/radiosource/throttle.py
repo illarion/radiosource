@@ -44,11 +44,6 @@ class OggsThrottler(object):
 
         self.blocksize = 8000
         self.input = input
-
-        self.t0 = None
-        self.g0 = None
-        self.buffer = None
-
         self.log = logging.getLogger("Throttler")
 
     def find_magic(self, data):
@@ -63,7 +58,7 @@ class OggsThrottler(object):
 
         return p
 
-    def parse_page_header(self, data, magic_pos):
+    def get_granule_position(self, data, magic_pos):
         """
 
         :type magic_pos: int
@@ -82,8 +77,12 @@ class OggsThrottler(object):
 
     def read(self):
         data = b''
-        sl = 1.4
-        old_diff = 0
+        pause = 1.4
+        old_time_diff = 0
+
+        t0 = None
+        g0 = None
+
         while True:
             try:
                 data += self.input.read(self.blocksize)
@@ -91,48 +90,45 @@ class OggsThrottler(object):
                 self.log.exception("Unable to read")
                 continue
 
-            position = self.find_magic(data)
-            if position is None:
+            oggs_header_offset = self.find_magic(data)
+            if oggs_header_offset is None:
                 continue
 
-            gp = self.parse_page_header(data, position)
-            if not gp:
+            granule_position = self.get_granule_position(data, oggs_header_offset)
+            if not granule_position:
                 continue
 
             current_time = time.time()
-            if self.t0 is None:
-                self.reset(current_time, gp)
+            if t0 is None:
+                t0 = current_time
+                g0 = granule_position
 
-            dt = current_time - self.t0
-            dgp = gp - self.g0
+            time_since_start = current_time - t0
+            granule_since_start = granule_position - g0
 
-            if dgp < 0:
-                print "reset"
-                self.reset(current_time, gp)
+            if granule_since_start < 0:
+                t0 = current_time
+                g0 = granule_position
                 yield data
                 data = b''
                 continue
 
-            cur_diff = dgp - dt
-            if cur_diff > 0:
-                if not old_diff:
-                    old_diff = cur_diff
+            time_diff = granule_since_start - time_since_start
+            if time_diff > 0:
+                if not old_time_diff:
+                    old_time_diff = time_diff
 
-                if cur_diff > old_diff:
-                    sl -= 0.01
-                elif cur_diff < old_diff:
-                    sl += 0.01
+                if time_diff > old_time_diff:
+                    pause -= 0.01
+                elif time_diff < old_time_diff:
+                    pause += 0.01
 
-                old_diff = cur_diff
+                old_time_diff = time_diff
 
-                time.sleep(sl)
+                time.sleep(pause)
 
             yield data
             data = b''
-
-    def reset(self, current_time, gp):
-        self.t0 = current_time
-        self.g0 = gp
 
     def close(self):
         self.input.close()
