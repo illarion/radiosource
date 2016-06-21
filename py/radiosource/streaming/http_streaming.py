@@ -11,7 +11,7 @@ import os
 from radiosource.codec.recoder import Recoder
 from radiosource.meta import parse_fn
 from radiosource.streaming import Streamer
-from radiosource.throttle import OggsThrottler, QueueReader
+from radiosource.throttle import OggsThrottler, QueueReader, SimpleThrottler
 
 __author__ = 'shaman'
 
@@ -226,13 +226,15 @@ class IcecastHttpStreamer(Streamer):
         http = None
         while True:
             queue_reader = QueueReader(q)
-            throttler = OggsThrottler(queue_reader).read()
+            # throttler = OggsThrottler(queue_reader)
+            throttler = SimpleThrottler(queue_reader, bitrate=self.bitrate)
 
             if not http:
                 http = self._connect()
 
             try:
-                for datablock in throttler:
+                while True:
+                    datablock = throttler.read()
                     if self.__next.is_set():
                         recoding_thread.next()
                         self.__next.clear()

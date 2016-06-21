@@ -36,15 +36,55 @@ class QueueReader(object):
             self.on_close()
 
 
+class SimpleThrottler(object):
+    PERIOD = 1  # 1 sec
+
+    def __init__(self, input, bitrate=128):  # 128 kbps
+
+        self.speed = (bitrate * 1024) / 8
+        self.input = input
+
+        self.cnt = 0
+        self.t0 = None
+        self.log = logging.getLogger("Throttler")
+
+    def read(self, n=-1):
+
+        if self.t0 is None:
+            self.t0 = time.time()
+
+        if self.cnt >= self.speed:
+            t1 = time.time()
+            dt = t1 - self.t0
+
+            if dt < SimpleThrottler.PERIOD:
+                time.sleep(SimpleThrottler.PERIOD - dt)
+
+            self.cnt = 0
+            self.t0 = time.time()
+
+        try:
+            data = self.input.read(n)
+        except IOError, ex:
+            self.log.exception("I/O Error during read from source")
+            return ''
+        self.cnt += len(data)
+        return data
+
+    def close(self):
+        self.input.close()
+
+
 class OggsThrottler(object):
     MAGIC = b'OggS'
-    PAGE_HEADER_STRUCT = '4sBBQLLLB'
+    PAGE_HEADER_STRUCT = '4sBBqLLLB'
 
     def __init__(self, input):
 
         self.blocksize = 8000
         self.input = input
         self.log = logging.getLogger("Throttler")
+        self.generator = self.read_generator()
 
     def find_magic(self, data):
         """
@@ -75,13 +115,19 @@ class OggsThrottler(object):
         except:
             return None
 
+
     def read(self):
+        return self.generator.next()
+
+    def read_generator(self):
         data = b''
         pause = 1.4
         old_time_diff = 0
 
         t0 = None
         g0 = None
+
+        old_granule_since_start = 0
 
         while True:
             try:
@@ -113,19 +159,22 @@ class OggsThrottler(object):
                 data = b''
                 continue
 
-            time_diff = granule_since_start - time_since_start
-            if time_diff > 0:
-                if not old_time_diff:
+            if granule_since_start != old_granule_since_start:
+                time_diff = granule_since_start - time_since_start
+                if time_diff > 0:
+                    if not old_time_diff:
+                        old_time_diff = time_diff
+
+                    if time_diff > old_time_diff:
+                        pause -= 0.01
+                    elif time_diff < old_time_diff:
+                        pause += 0.01
+
                     old_time_diff = time_diff
 
-                if time_diff > old_time_diff:
-                    pause -= 0.01
-                elif time_diff < old_time_diff:
-                    pause += 0.01
+                    time.sleep(pause)
 
-                old_time_diff = time_diff
-
-                time.sleep(pause)
+            old_granule_since_start = granule_since_start
 
             yield data
             data = b''
