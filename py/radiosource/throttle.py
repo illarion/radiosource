@@ -5,37 +5,6 @@ from struct import unpack, calcsize
 __author__ = 'shaman'
 
 
-class QueueReader(object):
-    def __init__(self, q, on_close=None):
-        """
-        :type q: Queue.Queue
-        """
-        self.q = q
-        self.buffer = ''
-        self.on_close = on_close
-
-    def read(self, n=-1):
-        if self.buffer:
-            result = self.buffer[:n] if n > 0 else self.buffer[:]
-            self.buffer = self.buffer[n:] if n > 0 else ''
-            return result
-
-        data = self.q.get(block=True)
-
-        if n <= 0:
-            return data
-
-        if len(data) > n:
-            self.buffer += data[n:]
-            return data[:n]
-
-        return data
-
-    def close(self):
-        if self.on_close:
-            self.on_close()
-
-
 class SimpleThrottler(object):
     PERIOD = 1  # 1 sec
 

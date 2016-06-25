@@ -36,16 +36,6 @@ class Recoder(object):
             stderr=log_file
         )
 
-
-        # p = Popen(prepare_cmdline(
-        #     'oggenc - --raw --raw-bits 16 --raw-chan 2 --raw-rate 44100 --raw-endianness 0 '
-        #     '--ignorelength --managed -b {} -o -'.format(
-        #         self.bitrate), ),
-        #     stdin=subprocess.PIPE,
-        #     stdout=subprocess.PIPE,
-        #     stderr=log_file
-        # )
-
         self.copystream.set_destination_process(p)
         self.dst = p
 

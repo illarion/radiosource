@@ -11,7 +11,7 @@ import os
 from radiosource.codec.recoder import Recoder
 from radiosource.meta import parse_fn
 from radiosource.streaming import Streamer
-from radiosource.throttle import OggsThrottler, QueueReader, SimpleThrottler
+from radiosource.throttle import SimpleThrottler
 
 __author__ = 'shaman'
 
@@ -61,18 +61,19 @@ class MetaUpdater(object):
 
 
 class RecodingThread(Thread):
-    def __init__(self, target_queue, blocksize, source, bitrate, meta_updater):
+    def __init__(self, source, bitrate, meta_updater):
 
         self.meta_updater = meta_updater
         self.bitrate = bitrate
         self.source = source
-        self.target_queue = target_queue
+        self.blocksize = 1024
+        self.target_queue = Queue(maxsize=1)
         self.log = logging.getLogger("RecodingThread")
 
         self.__next = threading.Event()
         self.__start_over_encoding = threading.Event()
 
-        Thread.__init__(self, target=self.__in_thread, args=(target_queue, blocksize))
+        Thread.__init__(self, target=self.__in_thread)
         self.setDaemon(True)
 
     def next(self):
@@ -83,7 +84,10 @@ class RecodingThread(Thread):
         self.log.info("Starting over the encoder")
         self.__start_over_encoding.set()
 
-    def __in_thread(self, target_queue, blocksize):
+    def read(self, n=-1):
+        return self.target_queue.get(block=True)
+
+    def __in_thread(self):
         """
         :type target_queue: Queue.Queue
         :type block_size: int
@@ -95,15 +99,18 @@ class RecodingThread(Thread):
             self.log.info("Playing %s" % fn)
 
             recoder.make_input_process(fn)
-            data_block = recoder.read(blocksize)
+            data_block = recoder.read(self.blocksize)
             track_name = parse_fn(fn)
             self.meta_updater.update_meta(track_name)
 
-            while os.path.exists(fn) and not self.__next.is_set():
-
-                if data_block:
-                    target_queue.put(data_block, block=True)
+            while os.path.exists(fn):
                 try:
+                    if data_block:
+                        self.target_queue.put(data_block, block=True)
+
+                    if self.__next.is_set():
+                        recoder.kill_src_process()
+                        self.__next.clear()
 
                     if self.__start_over_encoding.is_set():
                         self.log.info("Killing destination process in order to start over the encoder")
@@ -119,11 +126,11 @@ class RecodingThread(Thread):
                         self.log.info("Finished emptying the data queue")
                         self.__start_over_encoding.clear()
 
-                    data_block = recoder.read(blocksize)
+                    data_block = recoder.read(self.blocksize)
 
                     if not data_block:
                         while not recoder.is_decoder_finished():
-                            data_block = recoder.read(blocksize)
+                            data_block = recoder.read(self.blocksize)
                             if data_block:
                                 break
 
@@ -141,8 +148,6 @@ class RecodingThread(Thread):
             self.log.info("recoder.kill_source_process() start")
             recoder.kill_src_process()
             self.log.info("recoder.kill_source_process() done")
-            if self.__next.is_set():
-                self.__next.clear()
 
 
 class IcecastHttpStreamer(Streamer):
@@ -217,17 +222,12 @@ class IcecastHttpStreamer(Streamer):
         self.__next.set()
 
     def stream(self):
-        blocksize = 4000
-        q = Queue(maxsize=1)
-
-        recoding_thread = RecodingThread(q, blocksize, self.source, self.bitrate, self.meta_updater)
+        recoding_thread = RecodingThread(self.source, self.bitrate, self.meta_updater)
         recoding_thread.start()
 
         http = None
         while True:
-            queue_reader = QueueReader(q)
-            # throttler = OggsThrottler(queue_reader)
-            throttler = SimpleThrottler(queue_reader, bitrate=self.bitrate)
+            throttler = SimpleThrottler(recoding_thread, bitrate=self.bitrate)
 
             if not http:
                 http = self._connect()
@@ -238,7 +238,6 @@ class IcecastHttpStreamer(Streamer):
                     if self.__next.is_set():
                         recoding_thread.next()
                         self.__next.clear()
-                        continue
 
                     try:
                         http.send(datablock)
