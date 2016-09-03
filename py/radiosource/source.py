@@ -56,7 +56,7 @@ class MultiplexingRuleSource(Source):
 
 
 class DirectorySource(Source):
-    def __init__(self, root, extensions=('.ogg', '.mp3'), recent_files_storage='/tmp/radiorecent'):
+    def __init__(self, root, recent_files_storage='/tmp/radiorecent'):
         super(DirectorySource, self).__init__()
         self.log = logging.getLogger('DirectorySource')
         self.recent_files_storage = recent_files_storage
@@ -70,7 +70,6 @@ class DirectorySource(Source):
         self.next_file = Queue(maxsize=1)
         self.current_track = None
         self.root = root
-        self.extensions = extensions
 
         self.rescanner = threading.Thread(target=self.scan)
         self.rescanner.start()
@@ -81,9 +80,8 @@ class DirectorySource(Source):
             scanned = set()
 
             for dirpath, dirnames, filenames in os.walk(self.root, followlinks=True):
-                scanned.update([os.path.join(dirpath, filename)
-                                for filename in filenames
-                                for ext in self.extensions if filename.endswith(ext)])
+                full_paths = [os.path.join(dirpath, filename) for filename in filenames]
+                scanned.update([full_path for full_path in full_paths if os.path.isfile(full_path)])
 
             self.max_recent_files = len(scanned) / 2
 

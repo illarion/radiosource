@@ -11,7 +11,7 @@ import logging
 
 
 class Ydl(object):
-    CMD = "youtube-dl --no-playlist -o '%(title)s.%(ext)s' --audio-quality 0 --extract-audio --audio-format vorbis \"{url}\""
+    CMD = "youtube-dl --no-playlist -o '%(title)s.%(ext)s' --audio-quality 0 --extract-audio --audio-format best \"{url}\""
 
     def __init__(self, download_folder):
         self.download_folder = download_folder

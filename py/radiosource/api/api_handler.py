@@ -7,7 +7,6 @@ import os
 import os.path
 from radiosource.http.youtubedl import Ydl
 from radiosource.meta import parse_fn
-from radiosource.source import DirectorySource
 
 SOCKET_PATH = '/tmp/radiosource.socket'
 
@@ -105,23 +104,5 @@ class RadioApi(ApiHandler):
         shutil.move(local_file_path, self.download_folder)
 
 
-if __name__ == '__main__':
-    a = RadioApi('/tmp', DirectorySource('/tmp'), '/tmp/trash')
-
-    time.sleep(1)
-
-    client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    client.connect(SOCKET_PATH)
-    client.send('next\n')
-    print client.recv(1024)
-
-    client.send('np\n')
-    print client.recv(1024)
-    client.close()
-
-    time.sleep(1)
-
-    while True:
-        time.sleep(1)
 
 
