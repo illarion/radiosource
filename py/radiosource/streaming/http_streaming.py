@@ -11,7 +11,7 @@ import os
 from radiosource.codec.recoder import Recoder
 from radiosource.meta import parse_fn
 from radiosource.streaming import Streamer
-from radiosource.throttle import SimpleThrottler
+from radiosource.throttle import NullThrottler
 
 __author__ = 'shaman'
 
@@ -72,6 +72,7 @@ class RecodingThread(Thread):
 
         self.__next = threading.Event()
         self.__start_over_encoding = threading.Event()
+        self.__close = threading.Event()
 
         Thread.__init__(self, target=self.__in_thread)
         self.setDaemon(True)
@@ -79,6 +80,9 @@ class RecodingThread(Thread):
     def next(self):
         self.log.info("Switch to next track")
         self.__next.set()
+
+    def close(self):
+        self.__close.set()
 
     def start_over_encoding(self):
         self.log.info("Starting over the encoder")
@@ -105,6 +109,11 @@ class RecodingThread(Thread):
 
             while os.path.exists(fn):
                 try:
+
+                    if self.__close.is_set():
+                        recoder.close()
+                        break
+
                     if data_block:
                         self.target_queue.put(data_block, block=True)
 
@@ -192,7 +201,7 @@ class IcecastHttpStreamer(Streamer):
 
         http.putrequest('PUT', self.point)
         http.putheader("Authorization", 'Basic ' + b64encode('source:%s' % self.password))
-        http.putheader("Content-type", "audio/mpeg")
+        http.putheader("Content-type", "audio/aac")
         http.putheader("Accept", "*/*")
         http.putheader("Ice-name", self.name)
         http.putheader("Ice-url", self.url)
@@ -227,7 +236,7 @@ class IcecastHttpStreamer(Streamer):
 
         http = None
         while True:
-            throttler = SimpleThrottler(recoding_thread, bitrate=self.bitrate)
+            throttler = NullThrottler(recoding_thread, bitrate=self.bitrate)
 
             if not http:
                 http = self._connect()

@@ -13,6 +13,7 @@ def prepare_cmdline(cmdline, **params):
 
 class Recoder(object):
     def __init__(self, bitrate=128):
+        self.closed = False
         self.log = logging.getLogger('Recoder')
         self.bitrate = bitrate
         self.copystream = CopyStream()
@@ -22,6 +23,9 @@ class Recoder(object):
         self.__make_output_process()
 
     def __make_output_process(self):
+        if self.closed:
+            return
+
         self.log.info('Maiking output process')
         try:
             log_file = open('/var/log/radio_oggenc.log', mode='w')
@@ -29,8 +33,8 @@ class Recoder(object):
             log_file = open('/tmp/radio_oggenc.log', mode='w')
 
         p = Popen(prepare_cmdline(
-            'lame -r --little-endian -b {} --cbr - -'.format(
-                self.bitrate), ),
+            'ffmpeg -f pcm_s16le -ac 2 -f s16le -re -i pipe: -strict -2 -c:a aac -b:a {bitrate}k -f adts pipe:',
+            bitrate=self.bitrate),
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=log_file
@@ -51,6 +55,9 @@ class Recoder(object):
         self.src = p
 
     def read(self, n=-1):
+        if self.closed:
+            return ''
+            
         exitcode = self.dst.poll()
         if exitcode is not None:
             self.log.warn('Output process died with %d' % exitcode)
@@ -83,5 +90,6 @@ class Recoder(object):
         return self.copystream.is_destination_dead()
 
     def close(self):
+        self.closed = True
         self.kill_src_process()
         self.kill_dst_process()

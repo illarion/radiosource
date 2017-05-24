@@ -4,6 +4,27 @@ from struct import unpack, calcsize
 
 __author__ = 'shaman'
 
+class NullThrottler(object): 
+
+    def __init__(self, input, bitrate):
+        self.input = input
+        self.log = logging.getLogger("Throttler")
+
+    def read(self, n=None):
+        if n is None:
+            n=2048
+
+        try:
+            data = self.input.read(n)
+        except IOError, ex:
+            self.log.exception("I/O Error during read from source")
+            return ''
+        
+        return data
+
+    def close(self):
+        self.input.close()        
+
 
 class SimpleThrottler(object):
     PERIOD = 1  # 1 sec
